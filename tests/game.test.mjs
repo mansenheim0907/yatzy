@@ -35,6 +35,17 @@ test('matchmaking parar två, lämna kön och undvik gamla rum',async()=>{
  await db.query("update yatzy_private.rooms set touched=clock_timestamp()-interval '31 seconds' where id=$1",[r.id]);
  const next=await call('find',token(),null,{name:'Ny'});assert.notEqual(next.id,r.id);await call('leave',t,r);
 });
+
+test('en timmes inaktivitet avslutar duellen och ger motståndaren vinsten',async()=>{
+ const {a,b,room}=await pair();
+ await db.query("update yatzy_private.rooms set action_at=clock_timestamp()-interval '61 minutes' where id=$1",[room.id]);
+ const timed=await call('get',a,room);
+ assert.equal(timed.status,'timeout');
+ assert.equal(timed.winner,1);
+ const again=await call('get',b,timed);
+ assert.equal(again.status,'timeout');
+ assert.equal(again.winner,1);
+});
 test('hel duell med 30 turer, bonus, vinnare och avslutad match',async()=>{
  const {a,b,room}=await pair();let r=room;
  for(const [key] of categories)for(const t of [a,b]){r=await call('roll',t,r);r=await call('score',t,r,{category:key});}
