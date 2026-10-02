@@ -12,7 +12,9 @@ function render(){
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?home():playing?game(myTurn):waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
  bind('#start',()=>{started=true;render();});
- bind('#friends',()=>{friends=!friends;render();});\n bind('#howto',()=>{message='Tre kast per tur. Lås tärningar mellan kasten och välj sedan en ledig kategori.';render();});\n bind('#history',()=>{message='Historik kommer i nästa steg.';render();});
+ bind('#friends',()=>{friends=!friends;render();});
+ bind('#howto',()=>{message='Tre kast per tur. Lås tärningar mellan kasten och välj sedan en ledig kategori.';render();});
+ bind('#history',()=>{message='Historik kommer i nästa steg.';render();});
  bind('#create',()=>enter('create'));bind('#find',()=>enter('find'));
  root.querySelector('#join-form')?.addEventListener('submit',e=>{e.preventDefault();enter('join');});
  bind('#roll',()=>act('roll'));bind('#leave',()=>{if(room.status==='waiting'||confirm('Lämna duellen? Om matchen har börjat vinner motståndaren.'))act('leave');});
