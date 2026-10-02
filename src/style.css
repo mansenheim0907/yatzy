@@ -152,3 +152,14 @@ body:has(main > .lobby-screen) .message{position:fixed;left:16px;right:16px;bott
  .share-link strong{font-size:16px}
  .share-link small{font-size:11px}
 }
+
+
+/* Session name step */
+.name-step{max-width:560px}
+.name-step h2{margin-bottom:10px}
+.name-step form{position:relative}
+.name-step .menu-primary{margin-top:18px}
+.name-note,.session-name{font-family:Georgia,'Times New Roman',serif;text-align:center;color:#6a533a}
+.name-note{margin:0 0 18px;font-size:14px}
+.session-name{margin:-4px 0 18px;font-size:14px}
+.session-name strong{color:#173f37}
