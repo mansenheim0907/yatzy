@@ -702,3 +702,132 @@ body:has(main > .game-view) .message{
  .game-actions{flex-direction:column;align-items:flex-end;gap:0}
  .game-actions .text-button{margin:0!important;padding:5px 0!important}
 }
+
+
+/* Horizontal duel board + two-column protocol */
+.game-view .game-grid{
+  grid-template-columns:1fr;
+  gap:14px;
+}
+.game-view .table{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(220px,.38fr);
+  grid-template-areas:
+    "top top"
+    "dice summary"
+    "help summary"
+    "roll details";
+  column-gap:20px;
+  row-gap:10px;
+  align-items:center;
+}
+.game-view .table-top{grid-area:top}
+.game-view .dice-row{
+  grid-area:dice;
+  justify-content:flex-start;
+  margin:18px 0 8px;
+}
+.game-view .dice-help{
+  grid-area:help;
+  text-align:left;
+  margin:0;
+}
+.game-view .roll{
+  grid-area:roll;
+  width:100%;
+  max-width:none;
+}
+.game-view .score-summary{
+  grid-area:summary;
+  margin:0;
+  align-self:stretch;
+}
+.game-view details{
+  grid-area:details;
+  margin:0;
+  align-self:end;
+}
+.game-view .scorecard{
+  padding:20px;
+}
+.game-view .score-columns{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+}
+.game-view .score-columns table{
+  width:100%;
+}
+.game-view .score-columns table:first-child tbody tr:last-child{
+  border-bottom:0;
+}
+.game-view .dice-row .die:before{
+  display:none;
+}
+@media(max-width:720px){
+  .game-view .table{
+    grid-template-columns:minmax(0,1fr) minmax(120px,.42fr);
+    grid-template-areas:
+      "top top"
+      "dice summary"
+      "help summary"
+      "roll details";
+    column-gap:8px;
+    row-gap:7px;
+  }
+  .game-view .dice-row{
+    justify-content:flex-start;
+    gap:4px;
+    margin:10px 0 4px;
+  }
+  .game-view .score-summary{
+    grid-template-columns:1fr 1fr;
+    gap:4px;
+  }
+  .game-view .score-summary>div{
+    min-width:0;
+    padding:8px 6px;
+  }
+  .game-view .score-summary strong{
+    font-size:22px;
+  }
+  .game-view details{
+    font-size:8px;
+  }
+  .game-view .scorecard{
+    padding:12px 8px;
+  }
+  .game-view .score-columns{
+    grid-template-columns:1fr 1fr;
+    gap:7px;
+  }
+  .game-view .score-columns table{
+    font-size:7.5px;
+  }
+  .game-view .score-columns th:first-child{
+    width:49%;
+  }
+  .game-view .score-columns td{
+    height:29px;
+  }
+  .game-view .score-columns td button{
+    min-width:31px;
+    min-height:21px;
+    padding:2px 3px;
+    font-size:8px;
+  }
+  .game-view .score-columns thead th{
+    font-size:7px;
+  }
+}
+@media(max-width:390px){
+  .game-view .table{
+    grid-template-columns:minmax(0,1fr) 112px;
+  }
+  .game-view .score-columns{
+    gap:5px;
+  }
+  .game-view .score-columns table{
+    font-size:7px;
+  }
+}
