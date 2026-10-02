@@ -86,9 +86,9 @@ body:has(main > .lobby-screen) .lobby-screen{
   min-height:calc(100dvh - 210px);
 }
 body:has(main > .lobby-screen) .lobby{
-  background:rgba(255,254,250,.92);
-  backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
+  background:rgba(246,234,210,.985);
+  backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px);
   box-shadow:0 18px 55px #0005;
 }
 @media(max-width:650px){
@@ -107,7 +107,7 @@ body:has(main > .lobby-screen) footer{display:none}
 body:has(main > .lobby-screen) main{padding:max(32px,env(safe-area-inset-top)) 18px max(26px,env(safe-area-inset-bottom));min-height:100dvh;display:grid;place-items:center}
 body:has(main > .lobby-screen) .message{position:fixed;left:16px;right:16px;bottom:max(8px,env(safe-area-inset-bottom));z-index:4;color:#fff;text-shadow:0 2px 8px #000}
 .lobby-screen{width:100%;min-height:0}
-.lobby-screen .tavern-menu{width:min(640px,94vw);margin:auto;padding:58px 38px 30px;position:relative;background:#f2e2c2;border:8px solid #5a341e;border-radius:22px;box-shadow:inset 0 0 0 2px #b77a3b,0 24px 70px #0009;color:#143f37}
+.lobby-screen .tavern-menu{width:min(640px,94vw);margin:auto;padding:58px 38px 30px;position:relative;background:#f6ead2;border:8px solid #5a341e;border-radius:22px;box-shadow:inset 0 0 0 2px #b77a3b,0 24px 70px #0009;color:#143f37}
 .tavern-menu:before{content:"";position:absolute;inset:8px;border:1px solid #c38d52;border-radius:10px;pointer-events:none}
 .menu-crest{position:absolute;left:50%;top:-72px;transform:translateX(-50%);width:190px;height:78px;background:#153f36;border:7px solid #5a341e;border-bottom-width:5px;border-radius:80px 80px 12px 12px;display:flex;align-items:center;justify-content:center;gap:10px;color:#e7c381;font-size:31px;box-shadow:inset 0 0 0 2px #b77a3b}
 .menu-crest i{width:2px;height:42px;background:#e7c381;transform:rotate(40deg)}
@@ -135,4 +135,20 @@ body:has(main > .lobby-screen) .message{position:fixed;left:16px;right:16px;bott
   .tavern-menu .menu-primary{font-size:20px;padding:16px 18px}
   .tavern-menu .menu-secondary{font-size:18px;padding:15px}
   .menu-link{font-size:14px;padding-left:7px;padding-right:7px;gap:7px}
+}
+
+
+/* Invite-link actions */
+.invite-note{margin:-4px 0 18px;padding:10px 12px;border:1px solid #c89a61;border-radius:8px;background:#fff4df;color:#6a4825;font-family:Georgia,'Times New Roman',serif;font-size:14px;line-height:1.45;text-align:center;position:relative}
+.tavern-menu .share-link{margin-top:18px;background:#f4e5c8;border:2px solid #c69a65;border-radius:8px;padding:13px 18px;box-shadow:0 4px 0 #c79b69;display:grid;grid-template-columns:auto 1fr auto;text-align:left;align-items:center}
+.share-link .share-icon{font-size:27px;line-height:1;color:#173f37}
+.share-link strong{display:block;font-family:Georgia,'Times New Roman',serif;font-size:18px;color:#173f37}
+.share-link small{display:block;margin-top:3px;font-family:Georgia,'Times New Roman',serif;font-size:12px;font-weight:400;color:#705b43}
+.share-link>span:last-child{font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:.8;color:#173f37}
+.waiting-share{max-width:330px;margin:0 auto 8px;justify-content:center}
+.waiting-share span{font-size:22px}
+@media(max-width:650px){
+ .tavern-menu .share-link{padding:12px 14px}
+ .share-link strong{font-size:16px}
+ .share-link small{font-size:11px}
 }
