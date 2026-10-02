@@ -339,3 +339,243 @@ body:has(main > .waiting-screen) .message{
 .info-page{text-align:left}
 .info-page h2,.info-page .menu-rule{text-align:center}
 .info-page p{line-height:1.55}
+
+
+/* Approved duel-table redesign: pub backdrop, right-side protocol and 3D sequential dice. */
+body:has(main > .game-view){
+  min-height:100dvh;
+  background:
+    linear-gradient(180deg,rgba(8,25,22,.08),rgba(8,25,22,.26)),
+    url('/yatzy-menu-background.avif') center center / cover no-repeat fixed;
+}
+body:has(main > .game-view) header,
+body:has(main > .game-view) footer{display:none}
+body:has(main > .game-view) main{
+  max-width:1120px;
+  min-height:100dvh;
+  padding:max(28px,env(safe-area-inset-top)) 18px max(24px,env(safe-area-inset-bottom));
+}
+body:has(main > .game-view) .message{
+  position:fixed;
+  left:16px;
+  right:16px;
+  bottom:max(6px,env(safe-area-inset-bottom));
+  z-index:8;
+  color:#fff;
+  text-shadow:0 2px 8px #000;
+  pointer-events:none;
+}
+.game-view{
+  width:100%;
+  padding:18px;
+  border-radius:28px;
+  background:rgba(19,52,47,.20);
+  backdrop-filter:blur(2px);
+  -webkit-backdrop-filter:blur(2px);
+}
+.game-view .game-heading{
+  margin:0 0 14px;
+  padding:20px 22px;
+  border:3px solid #143f37;
+  border-radius:22px;
+  background:rgba(248,238,215,.97);
+  box-shadow:0 16px 40px #0005;
+}
+.game-view .game-heading h1{
+  font-family:Georgia,'Times New Roman',serif;
+  color:#143f37;
+}
+.game-view .game-heading .eyebrow{color:#6c7e73}
+.game-view .game-heading p:not(.eyebrow){color:#6a725e;font-size:14px}
+.game-view .game-heading .text-button{
+  color:#715e4b;
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:15px;
+}
+.game-view .game-grid{
+  grid-template-columns:minmax(0,1.55fr) minmax(280px,.85fr);
+  gap:14px;
+  align-items:stretch;
+}
+.game-view .card{
+  border:3px solid #143f37;
+  border-radius:24px;
+  box-shadow:0 18px 44px #0005;
+}
+.game-view .table{
+  padding:24px;
+  background:rgba(248,238,215,.985);
+}
+.game-view .scorecard{
+  padding:18px 14px;
+  background:rgba(248,238,215,.985);
+}
+.game-view .score-title h2{
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:28px;
+  color:#143f37;
+}
+.game-view .score-title span{display:none}
+.game-view table{
+  background:rgba(255,255,255,.28);
+  border-radius:12px;
+  overflow:hidden;
+}
+.game-view tbody tr,
+.game-view thead tr,
+.game-view tfoot tr{border-color:#d7ccb5}
+.game-view tbody tr:nth-child(even){background:rgba(255,255,255,.18)}
+.game-view .bonus{background:rgba(222,231,204,.58)}
+.game-view tfoot{background:rgba(227,231,207,.72)}
+.game-view .score-summary>div{
+  background:rgba(255,255,255,.48);
+  border:1px solid rgba(20,63,55,.12);
+}
+.game-view .score-summary .active{
+  background:#edf3df;
+  outline:2px solid #7b9d67;
+}
+.game-view .roll{
+  min-height:62px;
+  border:3px solid #0b2f2a;
+  border-radius:14px;
+  background:#0e4b68;
+  box-shadow:inset 0 -4px 0 #082f46,0 6px 14px #0002;
+  font-size:19px;
+  font-weight:700;
+}
+.game-view .roll:hover:not(:disabled){background:#145b78}
+.game-view .dice-row{
+  perspective:700px;
+  gap:12px;
+  margin:42px 0 36px;
+}
+.game-view .dice-row .die{
+  --rx:-10deg;
+  --ry:10deg;
+  --rz:-2deg;
+  width:66px;
+  height:66px;
+  padding:11px;
+  border:1px solid #b9b6aa;
+  border-radius:15px;
+  background:
+    radial-gradient(circle at 28% 22%,#fff 0 8%,transparent 28%),
+    linear-gradient(145deg,#fffefa 0%,#f7f1e5 52%,#d8d3c7 100%);
+  color:#092f2b;
+  box-shadow:
+    inset 3px 3px 7px #fff,
+    inset -5px -6px 10px #bcb8ad,
+    0 7px 0 #c8c3b7,
+    0 12px 18px #0005;
+  transform-style:preserve-3d;
+  transform:rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz));
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.game-view .dice-row .die:nth-child(2){--rx:-7deg;--ry:-9deg;--rz:2deg}
+.game-view .dice-row .die:nth-child(3){--rx:-11deg;--ry:5deg;--rz:1deg}
+.game-view .dice-row .die:nth-child(4){--rx:-8deg;--ry:-7deg;--rz:-1deg}
+.game-view .dice-row .die:nth-child(5){--rx:-12deg;--ry:9deg;--rz:3deg}
+.game-view .dice-row .die:before{
+  content:"";
+  position:absolute;
+  inset:5px;
+  border-radius:11px;
+  border:1px solid rgba(255,255,255,.75);
+  pointer-events:none;
+}
+.game-view .dice-row .die .pip{
+  background:#0a2f2b;
+  box-shadow:inset 0 1px 2px #0008,0 1px 0 #fff8;
+}
+.game-view .dice-row .die.held{
+  background:linear-gradient(145deg,#2b675c,#143f37 58%,#082d29);
+  color:#fffefa;
+  border-color:#082d29;
+  box-shadow:inset 3px 3px 8px #ffffff24,inset -5px -6px 10px #0005,0 7px 0 #082d29,0 12px 18px #0005;
+}
+.game-view .dice-row .die.held .pip{background:#fffefa}
+.game-view .dice-row .die.rolling{
+  animation:die-roll-in .9s cubic-bezier(.18,.82,.28,1.05) both;
+  animation-delay:calc(var(--roll-order) * 140ms);
+  pointer-events:none;
+}
+@keyframes die-roll-in{
+  0%{
+    opacity:0;
+    transform:translate3d(-120px,-90px,130px) rotateX(500deg) rotateY(-430deg) rotateZ(180deg) scale(.72);
+    box-shadow:0 30px 38px #0002;
+  }
+  58%{
+    opacity:1;
+    transform:translate3d(12px,-18px,20px) rotateX(110deg) rotateY(-70deg) rotateZ(35deg) scale(1.05);
+  }
+  78%{
+    transform:translate3d(-4px,4px,0) rotateX(18deg) rotateY(14deg) rotateZ(-5deg) scale(.98);
+  }
+  100%{
+    opacity:1;
+    transform:rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(1);
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .game-view .dice-row .die.rolling{animation:none}
+}
+@media(max-width:720px){
+  body:has(main > .game-view){background-attachment:scroll}
+  body:has(main > .game-view) main{padding:8px 6px 16px}
+  .game-view{padding:6px;border-radius:18px}
+  .game-view .game-heading{
+    padding:13px 12px;
+    margin-bottom:7px;
+    border-width:2px;
+    border-radius:15px;
+  }
+  .game-view .game-heading h1{font-size:24px}
+  .game-view .game-heading p:not(.eyebrow){font-size:11px;margin-bottom:0}
+  .game-view .game-heading .eyebrow{margin-bottom:6px}
+  .game-view .game-heading .text-button{font-size:11px;margin-top:18px}
+  .game-view .game-grid{
+    grid-template-columns:minmax(0,1.58fr) minmax(142px,.9fr);
+    gap:6px;
+  }
+  .game-view .card{border-width:2px;border-radius:15px}
+  .game-view .table{padding:12px 8px}
+  .game-view .scorecard{padding:10px 6px}
+  .game-view .table-top{font-size:8px}
+  .game-view .dice-row{gap:4px;margin:27px 0 24px}
+  .game-view .dice-row .die{
+    width:38px;
+    height:38px;
+    padding:6px;
+    gap:2px;
+    border-radius:9px;
+    box-shadow:inset 2px 2px 4px #fff,inset -3px -4px 6px #bcb8ad,0 4px 0 #c8c3b7,0 7px 10px #0004;
+  }
+  .game-view .die span{top:45px;font-size:6px}
+  .game-view .dice-help{font-size:9px;min-height:26px}
+  .game-view .roll{min-height:47px;padding:10px 8px;font-size:12px}
+  .game-view .score-summary{gap:5px;margin-top:16px}
+  .game-view .score-summary>div{padding:9px 7px}
+  .game-view .score-summary span{font-size:9px}
+  .game-view .score-summary strong{font-size:25px}
+  .game-view .score-summary small{font-size:7px}
+  .game-view details{font-size:9px;margin-top:14px}
+  .game-view .score-title{margin-bottom:7px}
+  .game-view .score-title h2{font-size:18px}
+  .game-view table{font-size:8px}
+  .game-view th:first-child{width:52%}
+  .game-view td{height:30px}
+  .game-view thead th{font-size:7px;padding-bottom:5px}
+  .game-view thead small{font-size:6px}
+  .game-view td button{min-width:32px;min-height:22px;padding:2px 3px;font-size:8px}
+  .game-view .bonus{font-size:7px}
+  .game-view .bonus small{display:none}
+  .game-view tfoot{font-size:11px}
+  .game-view tfoot td{height:34px}
+}
+@media(max-width:390px){
+  .game-view .game-grid{grid-template-columns:minmax(0,1.55fr) minmax(132px,.9fr)}
+  .game-view .dice-row .die{width:34px;height:34px;padding:5px}
+  .game-view .roll{font-size:11px}
+}
