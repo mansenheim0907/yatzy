@@ -109,7 +109,7 @@ begin
    where status='waiting'
      and mode='online'
      and cardinality(hashes)=1
-     and not h=any(hashes)
+     and not (h=any(hashes))
      and touched>clock_timestamp()-interval '30 seconds'
    order by touched
    limit 1
@@ -155,7 +155,7 @@ begin
 
   if not found then raise exception 'Rummet hittades inte eller är fullt'; end if;
 
-  if not h=any(r.hashes) then
+  if not (h=any(r.hashes)) then
    if r.status<>'waiting' or cardinality(r.hashes)<>1 then raise exception 'Rummet hittades inte eller är fullt'; end if;
    update yatzy_private.rooms
      set hashes=array_append(hashes,h),
