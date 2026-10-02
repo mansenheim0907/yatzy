@@ -321,3 +321,21 @@ body:has(main > .waiting-screen) .message{
   letter-spacing:1.8px;
   font-weight:700;
 }
+
+/* Consistent previous-view navigation */
+.view-back{
+  align-self:flex-start;
+  margin:0 0 12px;
+  padding:8px 12px;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:999px;
+  background:rgba(20,14,10,.42);
+  color:inherit;
+  font:700 .9rem inherit;
+  cursor:pointer;
+}
+.view-back:hover{background:rgba(20,14,10,.62)}
+.inline-back{width:max-content;margin-bottom:10px}
+.info-page{text-align:left}
+.info-page h2,.info-page .menu-rule{text-align:center}
+.info-page p{line-height:1.55}
