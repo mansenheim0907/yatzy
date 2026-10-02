@@ -284,3 +284,40 @@ body:has(main > .waiting-screen) .message{
 .waiting-screen .waiting-share.sent span{
   color:#173f37;
 }
+
+
+/* Code-only private room */
+.code-room{text-align:center}
+.code-room .eyebrow{margin-bottom:14px}
+.code-room h2{margin-bottom:12px}
+.code-help{
+  font-family:Georgia,'Times New Roman',serif;
+  color:#705b43;
+  font-size:15px;
+  line-height:1.5;
+  margin:0 auto 22px;
+  max-width:440px;
+}
+.room-code-simple{
+  display:block;
+  width:min(360px,100%);
+  margin:0 auto 18px;
+  padding:22px 20px 18px;
+  border:2px solid #b98955;
+  border-radius:12px;
+  background:#f7ecd7;
+  color:#143f37;
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:42px;
+  letter-spacing:10px;
+  text-align:center;
+  box-shadow:0 4px 0 #c79b69;
+}
+.room-code-simple small{
+  display:block;
+  margin-top:12px;
+  font-family:'DM Sans',sans-serif;
+  font-size:9px;
+  letter-spacing:1.8px;
+  font-weight:700;
+}

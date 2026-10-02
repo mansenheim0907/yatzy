@@ -5,25 +5,26 @@ const root=document.querySelector('#app');
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,busy=false,message='',friends=false,inviteSent=false,started=Boolean(inviteCode),connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,refreshBusy=false;
+let room=null,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=Boolean(inviteCode),connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,refreshBusy=false;
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dots={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
 function die(n,held=false,index=null,disabled=false){return `<button class="die ${held?'held':''}" ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;}
 function render(){
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
- root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?home():playing?game(myTurn):waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
+ root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?home():playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
  bind('#start',()=>{started=true;render();});
  root.querySelector('#name-form')?.addEventListener('submit',e=>{e.preventDefault();saveNameAndContinue();});
  bind('#friends',()=>{friends=!friends;render();});
  bind('#howto',()=>{message='Tre kast per tur. Lås tärningar mellan kasten och välj sedan en ledig kategori.';render();});
  bind('#history',()=>{message='Historik kommer i nästa steg.';render();});
- bind('#create',()=>enter('create'));bind('#find',()=>enter('find'));
+ bind('#create',()=>createCodeRoom());bind('#find',()=>enter('find'));
  bind('#share',()=>createAndShare());bind('#share-room',()=>shareRoom());
+ bind('#copy-code',async()=>{try{await navigator.clipboard.writeText(room.code);message='Koden är kopierad.';}catch{message=`Koden är ${room.code}.`;}render();});
  root.querySelector('#join-form')?.addEventListener('submit',e=>{e.preventDefault();enter('join');});
  bind('#roll',()=>act('roll'));bind('#leave',()=>{if(room.status==='waiting'||confirm('Lämna duellen? Om matchen har börjat vinner motståndaren.'))act('leave');});
- bind('#home',()=>{cleanup();room=null;inviteSent=false;localStorage.removeItem('yatzy.room');message='';render();});
+ bind('#home',()=>{cleanup();room=null;codeRoom=false;inviteSent=false;localStorage.removeItem('yatzy.room');message='';render();});
  root.querySelectorAll('[data-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.die)}));
  root.querySelectorAll('[data-score]').forEach(el=>el.onclick=()=>{const category=el.dataset.score,points=score(category,room.dice);if(points!==0||confirm('Stryk kategorin och få 0 poäng?'))act('score',{category});});
 }
@@ -32,6 +33,7 @@ function home(){return started?(playerName()?lobby():nameStep()):splash();}
 function splash(){return `<section class="splash splash-art"><button id="start" class="start-hotspot" aria-label="Starta"></button></section>`;}
 function nameStep(){return `<section class="lobby-screen"><section class="lobby tavern-menu name-step"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Vad heter du?</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div>${inviteCode?'<p class="invite-note">Du har fått en matchlänk. Ange ditt namn så ansluter du direkt till rummet.</p>':'<p class="name-note">Namnet används under den här sessionen.</p>'}<form id="name-form"><input id="name" maxlength="20" autocomplete="nickname" placeholder="Ditt spelarnamn" autofocus required><button class="primary menu-primary">Fortsätt <span>›</span></button></form></section></section>`;}
 function lobby(){return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p><button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
+function codeWaiting(){return `<section class="lobby-screen"><section class="lobby tavern-menu code-room"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">PRIVAT DUELL</p><h2>Din rumskod</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="code-help">Ge koden till din vän. När den skrivs in startar matchen automatiskt.</p><button id="copy-code" class="room-code-simple" aria-label="Kopiera rumskod">${room.code}<small>TRYCK FÖR ATT KOPIERA</small></button><button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
 function waiting(){return `<section class="waiting-screen"><section class="waiting tavern-menu ${room.mode==='private'?'private-waiting':'online-waiting'}"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">${room.mode==='online'?'MATCHMAKING':'DIN PRIVATA DUELL'}</p><h1>${room.mode==='online'?'Letar efter<br>din motståndare.':'En plats kvar.<br>Bjud in en vän.'}</h1><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p>${room.mode==='online'?'Matchen börjar så snart ni är två.':'Dela matchlänken med din vän. När länken öppnas och namnet är angivet ansluts vännen direkt till rummet.'}</p>${room.mode==='private'?`<button id="share-room" class="primary waiting-share ${inviteSent?'sent':''}">${inviteSent?'Inbjudan skickad <span>✓</span>':'Dela matchlänk <span>↗</span>'}</button>`:'<div class="pulse">● ● ●</div>'}<button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
 function game(myTurn){
  const mine=room.cards[room.seat],other=1-room.seat,done=['finished','abandoned'].includes(room.status);
@@ -71,8 +73,19 @@ async function shareRoom(){
  }
  render();
 }
+async function createCodeRoom(){
+ codeRoom=true;inviteSent=false;
+ const name=playerName()||'Spelare';
+ busy=true;message='Skapar kod …';render();
+ try{
+  apply(await command('create',token,null,{name}));
+  await watch();
+  message='';
+ }catch(e){codeRoom=false;message=e.message;}
+ finally{busy=false;render();}
+}
 async function createAndShare(){
- inviteSent=false;
+ codeRoom=false;inviteSent=false;
  const name=playerName()||'Spelare';
  busy=true;message='Skapar en privat duell …';render();
  try{
@@ -85,11 +98,11 @@ async function createAndShare(){
 async function enter(action){
  const name=playerName()||'Spelare',code=root.querySelector('#code')?.value.toUpperCase();
  busy=true;message='';render();
- try{apply(await command(action,token,null,{name,code}));if(action==='join'&&inviteCode){history.replaceState({},'',import.meta.env.BASE_URL);}await watch();}catch(e){message=e.message;}finally{busy=false;render();}
+ try{codeRoom=false;apply(await command(action,token,null,{name,code}));if(action==='join'&&inviteCode){history.replaceState({},'',import.meta.env.BASE_URL);}await watch();}catch(e){message=e.message;}finally{busy=false;render();}
 }
 async function act(action,payload={}){
  if(busy)return;busy=true;message='';render();
- try{apply(await command(action,token,room.id,{...payload,version:room.version}));if(action==='leave'){cleanup();room=null;localStorage.removeItem('yatzy.room');}}
+ try{apply(await command(action,token,room.id,{...payload,version:room.version}));if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');}}
  catch(e){message=e.message;await refresh();}finally{busy=false;render();}
 }
 async function refresh(){
