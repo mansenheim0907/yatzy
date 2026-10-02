@@ -5,7 +5,7 @@ const root=document.querySelector('#app');
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=Boolean(inviteCode),subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=Boolean(inviteCode),subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dots={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
@@ -18,6 +18,7 @@ function render(){
  bind('#back-start',()=>{started=false;subview=null;message='';render();});
  bind('#back-lobby',()=>{friends=false;subview=null;message='';render();});
  bind('#back-info',()=>{subview=null;message='';render();});
+ bind('#back-matches',()=>closeRoom());
  root.querySelector('#name-form')?.addEventListener('submit',e=>{e.preventDefault();saveNameAndContinue();});
  bind('#friends',()=>{friends=!friends;render();});
  bind('#howto',()=>{subview='howto';message='';render();});
@@ -27,7 +28,8 @@ function render(){
  bind('#copy-code',async()=>{try{await navigator.clipboard.writeText(room.code);message='Koden är kopierad.';}catch{message=`Koden är ${room.code}.`;}render();});
  root.querySelector('#join-form')?.addEventListener('submit',e=>{e.preventDefault();enter('join');});
  bind('#roll',()=>act('roll'));bind('#leave',()=>{if(room.status==='waiting'||confirm('Lämna duellen? Om matchen har börjat vinner motståndaren.'))act('leave');});
- bind('#home',()=>{cleanup();room=null;codeRoom=false;inviteSent=false;localStorage.removeItem('yatzy.room');message='';render();});
+ bind('#home',()=>closeRoom());
+ root.querySelectorAll('[data-match]').forEach(el=>el.onclick=()=>openMatch(el.dataset.match));
  root.querySelectorAll('[data-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.die)}));
  root.querySelectorAll('[data-score]').forEach(el=>el.onclick=()=>{const category=el.dataset.score,points=score(category,room.dice);if(points!==0||confirm('Stryk kategorin och få 0 poäng?'))act('score',{category});});
 }
@@ -35,19 +37,48 @@ function bind(selector,fn){const el=root.querySelector(selector);if(el)el.onclic
 function home(){return started?(playerName()?lobby():nameStep()):splash();}
 function splash(){return `<section class="splash splash-art"><button id="start" class="start-hotspot" aria-label="Starta"></button></section>`;}
 function nameStep(){return `<section class="lobby-screen"><section class="lobby tavern-menu name-step"><button id="back-start" class="view-back" type="button" aria-label="Tillbaka till startsidan">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Vad heter du?</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div>${inviteCode?'<p class="invite-note">Du har fått en matchlänk. Ange ditt namn så ansluter du direkt till rummet.</p>':'<p class="name-note">Namnet används under den här sessionen.</p>'}<form id="name-form"><input id="name" maxlength="20" autocomplete="nickname" placeholder="Ditt spelarnamn" autofocus required><button class="primary menu-primary">Fortsätt <span>›</span></button></form></section></section>`;}
-function lobby(){return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p><button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="back-lobby" class="view-back inline-back" type="button">‹ Tillbaka</button><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
+function lobby(){const pending=matches.filter(m=>m.status==='playing'&&m.turn===m.seat).length;return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p>${matchList(pending)}<button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="back-lobby" class="view-back inline-back" type="button">‹ Tillbaka</button><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
+function matchList(pending){
+ if(matchesLoading&&!matches.length)return '<div class="match-list loading-matches">Hämtar dina matcher …</div>';
+ if(!matches.length)return '';
+ return `<section class="match-list"><div class="match-list-title"><h3>Dina matcher</h3>${pending?`<span class="turn-badge">${pending} din tur</span>`:''}</div><div class="match-items">${matches.map(m=>{
+  const other=m.names.length>1?m.names[1-m.seat]:'Väntar på motståndare';
+  const mine=totals(m.cards[m.seat]||{}).total;
+  const theirs=m.names.length>1?totals(m.cards[1-m.seat]||{}).total:null;
+  const waiting=m.status==='waiting';
+  const myTurn=m.status==='playing'&&m.turn===m.seat;
+  const left=timeLeft(m);
+  const status=waiting?'Inbjudan väntar':myTurn?`Din tur${left?' · '+left:''}`:`Väntar på ${esc(other)}`;
+  return `<button class="match-item ${myTurn?'your-turn':''}" data-match="${m.id}"><span class="match-opponent">${esc(other)}</span><span class="match-status">${status}</span><strong>${waiting?'—':mine+'–'+theirs}</strong><span class="match-arrow">›</span></button>`;
+ }).join('')}</div></section>`;
+}
+function timeLeft(m){
+ if(!m.deadline_at||m.status!=='playing'||m.turn!==m.seat)return '';
+ const ms=new Date(m.deadline_at).getTime()-Date.now();
+ if(ms<=0)return 'tiden ute';
+ const min=Math.max(1,Math.ceil(ms/60000));
+ return min>=60?'60 min kvar':min+' min kvar';
+}
 function infoView(kind){
  if(kind==='howto')return `<section class="lobby-screen"><section class="lobby tavern-menu info-page"><button id="back-info" class="view-back" type="button">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Så spelar du</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p>Varje spelare har upp till tre kast per tur. Efter första och andra kastet kan du låsa de tärningar du vill behålla och kasta om resten.</p><p>När du är nöjd väljer du en ledig kategori i protokollet. Varje kategori kan användas en gång. Bonusen är 50 poäng när Ettor–Sexor tillsammans når minst 63 poäng.</p><p>Duellen är klar när båda spelarna fyllt alla 15 kategorier. Högst totalpoäng vinner.</p></section></section>`;
  return `<section class="lobby-screen"><section class="lobby tavern-menu info-page"><button id="back-info" class="view-back" type="button">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Historik</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p>Matchhistorik kommer i nästa steg.</p></section></section>`;
 }
-function codeWaiting(){return `<section class="lobby-screen"><section class="lobby tavern-menu code-room"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">PRIVAT DUELL</p><h2>Din rumskod</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="code-help">Ge koden till din vän. När den skrivs in startar matchen automatiskt.</p><button id="copy-code" class="room-code-simple" aria-label="Kopiera rumskod">${room.code}<small>TRYCK FÖR ATT KOPIERA</small></button><button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
-function waiting(){return `<section class="waiting-screen"><section class="waiting tavern-menu ${room.mode==='private'?'private-waiting':'online-waiting'}"><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">${room.mode==='online'?'MATCHMAKING':'DIN PRIVATA DUELL'}</p><h1>${room.mode==='online'?'Letar efter<br>din motståndare.':'En plats kvar.<br>Bjud in en vän.'}</h1><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p>${room.mode==='online'?'Matchen börjar så snart ni är två.':'Dela matchlänken med din vän. När länken öppnas och namnet är angivet ansluts vännen direkt till rummet.'}</p>${room.mode==='private'?`<button id="share-room" class="primary waiting-share ${inviteSent?'sent':''}">${inviteSent?'Inbjudan skickad <span>✓</span>':'Dela matchlänk <span>↗</span>'}</button>`:'<div class="pulse">● ● ●</div>'}<button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
+function codeWaiting(){return `<section class="lobby-screen"><section class="lobby tavern-menu code-room"><button id="back-matches" class="view-back" type="button">‹ Dina matcher</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">PRIVAT DUELL</p><h2>Din rumskod</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="code-help">Ge koden till din vän. När den skrivs in startar matchen automatiskt.</p><button id="copy-code" class="room-code-simple" aria-label="Kopiera rumskod">${room.code}<small>TRYCK FÖR ATT KOPIERA</small></button><button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
+function waiting(){return `<section class="waiting-screen"><section class="waiting tavern-menu ${room.mode==='private'?'private-waiting':'online-waiting'}"><button id="back-matches" class="view-back" type="button">‹ Dina matcher</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><p class="eyebrow">${room.mode==='online'?'MATCHMAKING':'DIN PRIVATA DUELL'}</p><h1>${room.mode==='online'?'Letar efter<br>din motståndare.':'En plats kvar.<br>Bjud in en vän.'}</h1><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p>${room.mode==='online'?'Matchen börjar så snart ni är två.':'Dela matchlänken med din vän. När länken öppnas och namnet är angivet ansluts vännen direkt till rummet.'}</p>${room.mode==='private'?`<button id="share-room" class="primary waiting-share ${inviteSent?'sent':''}">${inviteSent?'Inbjudan skickad <span>✓</span>':'Dela matchlänk <span>↗</span>'}</button>`:'<div class="pulse">● ● ●</div>'}<button id="leave" class="text-button" ${busy?'disabled':''}>Avbryt</button></section></section>`;}
 function game(myTurn){
  const mine=room.cards[room.seat],other=1-room.seat,done=['finished','abandoned','timeout'].includes(room.status);
  const heading=done?(room.winner===null?'Oavgjort!':room.winner===room.seat?'Du vann duellen!':`${esc(room.names[room.winner])} vann!`):myTurn?'Din tur att chansa.':`${esc(room.names[room.turn])} kastar.`;
- return `<section class="game-view"><section class="game-heading"><div><p class="eyebrow">DUELL / ${room.code}</p><h1>${heading}</h1><p>${done?(room.status==='abandoned'?'Duellen avslutades när en spelare lämnade.':room.status==='timeout'?'Matchen avslutades efter en timme utan nytt drag. Motståndaren vann på tidsgräns.':'Alla kast är gjorda. Tack för en god match!'):myTurn?'Kasta tärningarna och välj var poängen gör mest nytta.':'Följ kasten live. Snart är det din tur.'}</p></div>${done?'<button id="home" class="secondary">Spela en ny duell ↗</button>':`<button id="leave" class="text-button" ${busy?'disabled':''}>Lämna match</button>`}</section><div class="game-grid"><section class="table card"><div class="table-top"><span>${done?'SLUTRESULTAT':myTurn?'DITT KAST':'MOTSTÅNDARENS KAST'}</span><span>${room.rolls} / 3 KAST</span></div><div class="dice-row">${room.dice.map((n,i)=>die(n,room.held[i],i,!myTurn||busy||room.rolls===0||room.rolls===3,rollingIndices.indexOf(i))).join('')}</div><p class="dice-help">${done?'Sugen på revansch? Starta en ny duell.':room.rolls===0?'Dags att låta tärningarna tala.':'Tryck på en tärning för att låsa eller låsa upp den.'}</p><button id="roll" class="primary roll" ${!myTurn||busy||room.rolls>=3||room.held.every(Boolean)?'disabled':''}>${room.rolls===0?'Kasta tärningarna':room.rolls===3?'Välj en kategori →':'Kasta igen'} <span>⚄</span></button><div class="score-summary">${room.names.map((name,i)=>`<div class="${i===room.turn&&!done?'active':''}"><span>${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong><small>${Object.keys(room.cards[i]).length} av 15 kategorier</small></div>`).join('')}</div><details><summary>Så räknas poängen</summary><p>Bonus: 50 poäng vid minst 63 på Ettor–Sexor. Yatzy: 50. Liten stege: 15. Stor stege: 20. Par, tretal och fyrtal ger summan av gruppen. Två par måste ha olika värden. Kåk kräver ett tretal och ett annat par. Du kan stryka en kategori för 0 poäng.</p></details></section><section class="scorecard card"><div class="score-title"><h2>Protokollet</h2><span>15 KATEGORIER</span></div><table><thead><tr><th>Kategori</th><th>${esc(room.names[room.seat])}<small>DU</small></th><th>${esc(room.names[other])}</th></tr></thead><tbody>${categories.map(([key,label],i)=>`${i===6?`<tr class="bonus"><th>Summa övre</th><td>${totals(mine).upper}</td><td>${totals(room.cards[other]).upper}</td></tr><tr class="bonus"><th>Bonus <small>63 → +50</small></th><td>${totals(mine).bonus}</td><td>${totals(room.cards[other]).bonus}</td></tr>`:''}<tr><th>${label}</th><td>${mine[key]!==undefined?`<b>${mine[key]}</b>`:myTurn&&room.rolls>0?`<button data-score="${key}" aria-label="Välj ${label}, ${score(key,room.dice)} poäng" ${busy?'disabled':''}>${score(key,room.dice)} <span>＋</span></button>`:'<span class="empty">—</span>'}</td><td>${room.cards[other][key]??'<span class="empty">—</span>'}</td></tr>`).join('')}</tbody><tfoot><tr><th>Totalt</th><td>${totals(mine).total}</td><td>${totals(room.cards[other]).total}</td></tr></tfoot></table></section></div></section>`;
+ return `<section class="game-view"><section class="game-heading"><div><p class="eyebrow">DUELL / ${room.code}</p><h1>${heading}</h1><p>${done?(room.status==='abandoned'?'Duellen avslutades när en spelare lämnade.':room.status==='timeout'?'Matchen avslutades efter en timme utan nytt drag. Motståndaren vann på tidsgräns.':'Alla kast är gjorda. Tack för en god match!'):myTurn?'Kasta tärningarna och välj var poängen gör mest nytta.':'Följ kasten live. Snart är det din tur.'}</p></div>${done?'<button id="home" class="secondary">Till dina matcher ↗</button>':`<div class="game-actions"><button id="back-matches" class="text-button">Dina matcher</button><button id="leave" class="text-button" ${busy?'disabled':''}>Lämna match</button></div>`}</section><div class="game-grid"><section class="table card"><div class="table-top"><span>${done?'SLUTRESULTAT':myTurn?'DITT KAST':'MOTSTÅNDARENS KAST'}</span><span>${room.rolls} / 3 KAST</span></div><div class="dice-row">${room.dice.map((n,i)=>die(n,room.held[i],i,!myTurn||busy||room.rolls===0||room.rolls===3,rollingIndices.indexOf(i))).join('')}</div><p class="dice-help">${done?'Sugen på revansch? Starta en ny duell.':room.rolls===0?'Dags att låta tärningarna tala.':'Tryck på en tärning för att låsa eller låsa upp den.'}</p><button id="roll" class="primary roll" ${!myTurn||busy||room.rolls>=3||room.held.every(Boolean)?'disabled':''}>${room.rolls===0?'Kasta tärningarna':room.rolls===3?'Välj en kategori →':'Kasta igen'} <span>⚄</span></button><div class="score-summary">${room.names.map((name,i)=>`<div class="${i===room.turn&&!done?'active':''}"><span>${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong><small>${Object.keys(room.cards[i]).length} av 15 kategorier</small></div>`).join('')}</div><details><summary>Så räknas poängen</summary><p>Bonus: 50 poäng vid minst 63 på Ettor–Sexor. Yatzy: 50. Liten stege: 15. Stor stege: 20. Par, tretal och fyrtal ger summan av gruppen. Två par måste ha olika värden. Kåk kräver ett tretal och ett annat par. Du kan stryka en kategori för 0 poäng.</p></details></section><section class="scorecard card"><div class="score-title"><h2>Protokollet</h2><span>15 KATEGORIER</span></div><table><thead><tr><th>Kategori</th><th>${esc(room.names[room.seat])}<small>DU</small></th><th>${esc(room.names[other])}</th></tr></thead><tbody>${categories.map(([key,label],i)=>`${i===6?`<tr class="bonus"><th>Summa övre</th><td>${totals(mine).upper}</td><td>${totals(room.cards[other]).upper}</td></tr><tr class="bonus"><th>Bonus <small>63 → +50</small></th><td>${totals(mine).bonus}</td><td>${totals(room.cards[other]).bonus}</td></tr>`:''}<tr><th>${label}</th><td>${mine[key]!==undefined?`<b>${mine[key]}</b>`:myTurn&&room.rolls>0?`<button data-score="${key}" aria-label="Välj ${label}, ${score(key,room.dice)} poäng" ${busy?'disabled':''}>${score(key,room.dice)} <span>＋</span></button>`:'<span class="empty">—</span>'}</td><td>${room.cards[other][key]??'<span class="empty">—</span>'}</td></tr>`).join('')}</tbody><tfoot><tr><th>Totalt</th><td>${totals(mine).total}</td><td>${totals(room.cards[other]).total}</td></tr></tfoot></table></section></div></section>`;
 }
-function apply(next){if(room&&next.id===room.id&&next.version<room.version)return;room=next;localStorage.setItem('yatzy.room',room.id);render();}
+function apply(next){
+ if(room&&next.id===room.id&&next.version<room.version)return;
+ room=next;
+ localStorage.setItem('yatzy.room',room.id);
+ const i=matches.findIndex(m=>m.id===next.id);
+ if(['waiting','playing'].includes(next.status)){if(i>=0)matches[i]=next;else matches.unshift(next);}
+ else if(i>=0)matches.splice(i,1);
+ render();
+}
 async function saveNameAndContinue(){
  const value=root.querySelector('#name')?.value.trim();
  if(!value)return;
@@ -62,6 +93,7 @@ async function saveNameAndContinue(){
   busy=false;render();
   return;
  }
+ await refreshMatches();
  render();
 }
 function inviteUrl(code){const url=new URL(import.meta.env.BASE_URL,location.origin);url.searchParams.set('room',code);return url.toString();}
@@ -119,7 +151,7 @@ async function act(action,payload={}){
    rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1550);
   }
   apply(next);
-  if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');}
+  if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
  }
  catch(e){rollingIndices=[];message=e.message;await refresh();}finally{busy=false;render();}
 }
@@ -130,9 +162,40 @@ async function refresh(){
  finally{refreshBusy=false;}
 }
 function cleanup(){unsubscribe();clearInterval(timer);}
+async function refreshMatches(){
+ if(!configured||!token||!playerName()||matchesLoading)return;
+ matchesLoading=true;
+ try{matches=await command('list',token,null);message=message==='Kunde inte hämta dina matcher.'?'':message;}
+ catch{if(!room)message='Kunde inte hämta dina matcher.';}
+ finally{matchesLoading=false;if(!room)render();}
+}
+async function openMatch(id){
+ if(busy)return;
+ busy=true;message='';
+ try{
+  cleanup();
+  const state=await command('get',token,id);
+  room=state;codeRoom=state.status==='waiting'&&state.mode==='private';localStorage.setItem('yatzy.room',id);
+  await watch();
+ }catch(e){message=e.message;room=null;await refreshMatches();}
+ finally{busy=false;render();}
+}
+async function closeRoom(){
+ cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];localStorage.removeItem('yatzy.room');message='';
+ await refreshMatches();render();
+}
 async function watch(){cleanup();unsubscribe=await subscribe(room.id,token,refresh,status=>{connection=status;render();});timer=setInterval(refresh,local?700:5000);await refresh();}
-window.addEventListener('online',refresh);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refresh();});
+window.addEventListener('online',()=>{if(room)refresh();else refreshMatches();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(room)refresh();else refreshMatches();}});matchesTimer=setInterval(()=>{if(!room&&started&&playerName())refreshMatches();},30000);
 render();
 const saved=localStorage.getItem('yatzy.room');
-if(saved&&configured&&token){busy=true;message='Återansluter till din duell …';render();try{room=await command('get',token,saved);message='';await watch();}catch(e){message=`Kunde inte återansluta: ${e.message}. Ladda om för att försöka igen.`;}finally{busy=false;render();}}
-else if(inviteCode&&configured&&token&&playerName()){busy=true;message='Ansluter till rummet …';render();try{apply(await command('join',token,null,{name:playerName(),code:inviteCode}));history.replaceState({},'',import.meta.env.BASE_URL);await watch();message='';}catch(e){message=e.message;}finally{busy=false;render();}}
+if(inviteCode&&configured&&token&&playerName()){
+ busy=true;message='Ansluter till rummet …';render();
+ try{apply(await command('join',token,null,{name:playerName(),code:inviteCode}));history.replaceState({},'',import.meta.env.BASE_URL);await watch();message='';}
+ catch(e){message=e.message;await refreshMatches();}
+ finally{busy=false;render();}
+}else if(saved&&configured&&token){
+ busy=true;message='Återansluter till din duell …';render();
+ try{room=await command('get',token,saved);message='';await watch();}
+ catch{room=null;localStorage.removeItem('yatzy.room');message='';await refreshMatches();}
+ finally{busy=false;render();}
+}else if(configured&&token&&playerName())await refreshMatches();
