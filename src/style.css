@@ -64,3 +64,38 @@ body:has(main > .splash-art) main{
   cursor:pointer;
   touch-action:manipulation;
 }
+
+
+/* Lobby/menu background: same illustrated pub world as the splash, new angle. */
+body:has(main > .lobby-screen){
+  min-height:100dvh;
+  background:
+    linear-gradient(180deg,rgba(8,25,22,.08),rgba(8,25,22,.22)),
+    url('/yatzy-menu-background.avif') center center / cover no-repeat fixed;
+}
+body:has(main > .lobby-screen) header{
+  background:rgba(247,245,238,.86);
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+body:has(main > .lobby-screen) main{
+  max-width:none;
+  min-height:calc(100dvh - 150px);
+}
+body:has(main > .lobby-screen) .lobby-screen{
+  min-height:calc(100dvh - 210px);
+}
+body:has(main > .lobby-screen) .lobby{
+  background:rgba(255,254,250,.92);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  box-shadow:0 18px 55px #0005;
+}
+@media(max-width:650px){
+  body:has(main > .lobby-screen){
+    background-attachment:scroll;
+  }
+  body:has(main > .lobby-screen) main{
+    min-height:calc(100dvh - 126px);
+  }
+}
