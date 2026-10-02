@@ -29,6 +29,22 @@ test('turkontroll, lås, tre kast och skydd mot gamla/dubbla kommandon',async()=
  await assert.rejects(call('roll',a,r),/tre gånger/);await assert.rejects(call('hold',a,r,{index:0}),/kan inte låsas/);
  const points=score('chance',r.dice);r=await call('score',a,r,{category:'chance'});assert.equal(r.cards[0].chance,points);assert.equal(r.turn,1);assert.equal(r.rolls,0);assert.deepEqual(r.held,Array(5).fill(false));
 });
+test('en spelare kan ha flera parallella privata dueller',async()=>{
+ const a=token(),b=token(),c=token();
+ const first=await call('create',a,null,{name:'Ada'});
+ const second=await call('create',a,null,{name:'Ada'});
+ assert.notEqual(first.id,second.id);
+ const one=await call('join',b,null,{name:'Bo',code:first.code});
+ const two=await call('join',c,null,{name:'Cleo',code:second.code});
+ assert.equal(one.status,'playing');
+ assert.equal(two.status,'playing');
+ const list=await call('list',a);
+ assert.equal(list.length,2);
+ assert.deepEqual(new Set(list.map(r=>r.id)),new Set([first.id,second.id]));
+ assert.ok(list.every(r=>r.seat===0));
+ assert.ok(list.every(r=>r.deadline_at));
+});
+
 test('matchmaking parar två, lämna kön och undvik gamla rum',async()=>{
  const {a,b,room}=await pair('find');assert.equal(room.names.length,2);await call('leave',a,room);
  const t=token();let r=await call('find',t,null,{name:'Väntar'});assert.equal(r.status,'waiting');assert.equal((await call('find',t,null,{name:'Väntar'})).id,r.id);
