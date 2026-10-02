@@ -273,3 +273,14 @@ body:has(main > .waiting-screen) .message{
   .waiting-screen .waiting p:not(.eyebrow){font-size:14px}
   .waiting-screen .waiting-share{font-size:19px;padding:16px 18px}
 }
+
+
+.waiting-screen .waiting-share.sent{
+  background:#e9dfc6;
+  color:#173f37;
+  border-color:#b98955;
+  box-shadow:inset 0 0 0 2px #d4b37f;
+}
+.waiting-screen .waiting-share.sent span{
+  color:#173f37;
+}
