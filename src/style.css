@@ -1818,34 +1818,23 @@ body:has(main > .game-view):before{
   .avatar-choice{border-radius:7px}
 }
 
-/* More physical dice throw */
-.game-view .dice-row .die.rolling{
-  animation:real-die-throw 1.18s cubic-bezier(.14,.78,.22,1) both;
-  animation-delay:calc(var(--roll-order) * 80ms);
+/* Dice motion is driven per die with Web Animations API.
+   CSS only supplies depth/perspective and the resting state. */
+.game-view .dice-tray{perspective:720px}
+.game-view .dice-row{transform-style:preserve-3d}
+.game-view .dice-row .die{
+  transform-style:preserve-3d;
+  will-change:transform;
 }
-@keyframes real-die-throw{
-  0%{
-    transform:translate3d(calc(var(--throw-x,0px) - 34px),-42px,80px) rotateX(680deg) rotateY(-590deg) rotateZ(260deg) scale(.86);
-    filter:blur(1.4px);
-  }
-  38%{
-    transform:translate3d(calc(var(--tx,0px) + 14px),calc(var(--ty,0px) - 10px),25px) rotateX(330deg) rotateY(-250deg) rotateZ(125deg) scale(1.04);
-    filter:blur(.7px);
-  }
-  62%{
-    transform:translate3d(calc(var(--tx,0px) - 7px),calc(var(--ty,0px) + 5px),5px) rotateX(72deg) rotateY(41deg) rotateZ(calc(var(--rz) - 12deg)) scale(.97);
-    filter:none;
-  }
-  79%{
-    transform:translate3d(calc(var(--tx,0px) + 3px),calc(var(--ty,0px) - 3px),9px) rotateX(calc(var(--rx) + 18deg)) rotateY(calc(var(--ry) - 11deg)) rotateZ(calc(var(--rz) + 7deg)) scale(1.02);
-  }
-  90%{
-    transform:translate3d(calc(var(--tx,0px) - 1px),calc(var(--ty,0px) + 1px),1px) rotateX(calc(var(--rx) - 4deg)) rotateY(calc(var(--ry) + 3deg)) rotateZ(calc(var(--rz) - 2deg)) scale(.995);
-  }
-  100%{
-    transform:translate3d(var(--tx,0px),var(--ty,0px),0) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(1);
-    filter:none;
-  }
+.game-view .dice-row .die.rolling{
+  pointer-events:none;
+  z-index:3;
+}
+.game-view .dice-row .die:not(.rolling){
+  transform:translate3d(var(--tx,0px),var(--ty,0px),0) rotateZ(var(--rz,0deg));
+}
+@media(prefers-reduced-motion:reduce){
+  .game-view .dice-row .die{will-change:auto}
 }
 
 

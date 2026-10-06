@@ -17,7 +17,7 @@ document.addEventListener('touchmove',e=>{
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},presenceUnsubscribe=()=>{},onlineCount=local?1:0,timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},presenceUnsubscribe=()=>{},onlineCount=local?1:0,timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer,rollAnimationPending=false,rollSequence=0;
 let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.avatar')??0)));
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
@@ -57,13 +57,62 @@ function rememberInputs(){
 }
 
 function randomLanding(index){
- const jitter=(min,max)=>Math.round(min+Math.random()*(max-min));
- return {x:jitter(-5,5),y:jitter(-9,9),rz:jitter(-10,10),rx:jitter(-14,-6),ry:jitter(-10,10),throwX:(index-2)*18+jitter(-12,12)};
+ const rand=(min,max)=>min+Math.random()*(max-min);
+ const dir=Math.random()<.5?-1:1;
+ return {
+  x:rand(-7,7),y:rand(-10,10),rz:rand(-13,13),rx:rand(-10,-4),ry:rand(-8,8),
+  entryX:(index-2)*16+rand(-34,34),
+  entryY:rand(-58,-38),
+  sideKick:rand(-18,18),
+  spinX:dir*rand(540,940),
+  spinY:-dir*rand(430,860),
+  spinZ:rand(-320,320),
+  bounce1:rand(20,34),
+  bounce2:rand(7,15),
+  duration:rand(1320,1850),
+  delay:rand(0,130)
+ };
 }
 function die(n,held=false,index=null,disabled=false,rollOrder=-1){
  const rolling=rollOrder>=0,p=index===null?null:diceLanding[index];
- const style=p?`style="--tx:${p.x}px;--ty:${p.y}px;--rz:${p.rz}deg;--rx:${p.rx}deg;--ry:${p.ry}deg;--throw-x:${p.throwX??0}px;--roll-order:${Math.max(0,rollOrder)}"`:'';
- return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
+ const style=p?`style="--tx:${p.x}px;--ty:${p.y}px;--rz:${p.rz}deg;--rx:${p.rx}deg;--ry:${p.ry}deg"`:'';
+ return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" data-roll-order="${Math.max(0,rollOrder)}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
+}
+function animateDiceRoll(){
+ if(!rollAnimationPending||busy||!rollingIndices.length)return;
+ rollAnimationPending=false;
+ const seq=rollSequence;
+ const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const animations=[];
+ for(const index of rollingIndices){
+  const el=root.querySelector(`[data-die="${index}"]`);
+  const p=diceLanding[index];
+  if(!el||!p)continue;
+  if(reduceMotion){
+   el.style.transform=`translate3d(${p.x}px,${p.y}px,0) rotateZ(${p.rz}deg)`;
+   continue;
+  }
+  const final=`translate3d(${p.x}px,${p.y}px,0) rotateZ(${p.rz}deg) scale(1)`;
+  const frames=[
+   {offset:0,transform:`translate3d(${p.entryX}px,${p.entryY}px,72px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.92)`,filter:'blur(.7px)'},
+   {offset:.34,transform:`translate3d(${p.x+p.sideKick}px,${p.y-p.bounce1}px,34px) rotateX(${p.spinX*.46}deg) rotateY(${p.spinY*.46}deg) rotateZ(${p.spinZ*.46}deg) scale(1.025)`,filter:'blur(.25px)'},
+   {offset:.58,transform:`translate3d(${p.x-p.sideKick*.45}px,${p.y+5}px,0) rotateX(${p.spinX*.70}deg) rotateY(${p.spinY*.70}deg) rotateZ(${p.spinZ*.70}deg) scale(.985)`,filter:'none'},
+   {offset:.72,transform:`translate3d(${p.x+p.sideKick*.2}px,${p.y-p.bounce2}px,15px) rotateX(${p.spinX*.84}deg) rotateY(${p.spinY*.84}deg) rotateZ(${p.spinZ*.84}deg) scale(1.01)`},
+   {offset:.86,transform:`translate3d(${p.x-2}px,${p.y+1}px,0) rotateX(${p.spinX*.95}deg) rotateY(${p.spinY*.95}deg) rotateZ(${p.spinZ*.95}deg) scale(.996)`},
+   {offset:1,transform:final,filter:'none'}
+  ];
+  const animation=el.animate(frames,{duration:p.duration,delay:p.delay,easing:'cubic-bezier(.16,.72,.2,1)',fill:'forwards'});
+  animations.push(animation.finished.catch(()=>{}));
+ }
+ if(!animations.length){
+  rollingIndices=[];render();return;
+ }
+ Promise.all(animations).then(()=>{
+  if(seq!==rollSequence)return;
+  rollingIndices=[];
+  clearTimeout(rollAnimationTimer);
+  render();
+ });
 }
 
 function render(){
@@ -94,6 +143,7 @@ function render(){
  root.querySelectorAll('[data-avatar]').forEach(el=>el.onclick=()=>{selectedAvatar=Number(el.dataset.avatar);localStorage.setItem('yatzy.avatar',String(selectedAvatar));render();});
  root.querySelectorAll('[data-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.die)}));
  root.querySelectorAll('[data-score]').forEach(el=>el.onclick=()=>{const category=el.dataset.score,points=score(category,room.dice);if(points!==0||confirm('Stryk kategorin och få 0 poäng?'))act('score',{category});});
+ if(rollAnimationPending&&!busy)queueMicrotask(animateDiceRoll);
 }
 function bind(selector,fn){const el=root.querySelector(selector);if(el)el.onclick=fn;}
 function home(){return started?(playerName()?lobby():nameStep()):splash();}
@@ -230,15 +280,20 @@ async function act(action,payload={}){
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
    rollingIndices=rerolled;
+   rollSequence+=1;
+   rollAnimationPending=true;
    clearTimeout(rollAnimationTimer);
    apply(next);
-   rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1450);
+   const longest=Math.max(0,...rerolled.map(i=>diceLanding[i].duration+diceLanding[i].delay));
+   rollAnimationTimer=setTimeout(()=>{
+    if(rollingIndices.length&&rollAnimationPending===false){rollingIndices=[];render();}
+   },longest+350);
   }else{
    apply(next);
   }
   if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
  }
- catch(e){rollingIndices=[];message=e.message;await refresh();}finally{busy=false;render();}
+ catch(e){rollingIndices=[];rollAnimationPending=false;message=e.message;await refresh();}finally{busy=false;render();}
 }
 async function refresh(){
  if(!room||refreshBusy)return;const id=room.id;refreshBusy=true;
