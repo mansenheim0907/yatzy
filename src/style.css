@@ -1878,3 +1878,45 @@ body:has(main > .game-view):before{
   .game-utility-bar{margin-bottom:5px}
   .restart-match{min-height:31px;padding:6px 9px;font-size:9px}
 }
+
+
+/* Approved photographic/comic avatar set */
+.avatar-picker>p,.avatar-group{display:none!important}
+.avatar-grid.mixed{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:9px;
+  margin-top:14px;
+}
+.avatar-choice{
+  aspect-ratio:1;
+  overflow:hidden;
+  padding:0;
+  border:2px solid #564b3f;
+  border-radius:10px;
+  background:#111;
+}
+.avatar-art{
+  display:block;
+  width:100%;
+  height:100%;
+  background-image:url('/yatzy-avatar-sprite.webp');
+  background-size:400% 500%;
+  background-position:var(--avatar-x) var(--avatar-y);
+  background-repeat:no-repeat;
+}
+.avatar-choice .avatar-art{
+  transition:transform .16s ease,filter .16s ease;
+}
+.avatar-choice:hover .avatar-art{transform:scale(1.035)}
+.avatar-choice.selected .avatar-art{filter:saturate(1.08) contrast(1.05)}
+.fighter-portrait .avatar-art{
+  width:100%;
+  height:100%;
+  min-height:118px;
+  background-size:400% 500%;
+}
+@media(max-width:650px){
+  .avatar-grid.mixed{grid-template-columns:repeat(4,1fr);gap:6px}
+  .fighter-portrait .avatar-art{min-height:90px}
+}
