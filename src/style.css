@@ -2035,3 +2035,113 @@ body{
   box-shadow:0 0 0 3px rgba(63,157,88,.14);
 }
 .online-now strong{font-size:12px;color:#173f37}
+
+
+/* Single-die realism prototype: solid wood table + true CSS 3D cube */
+.game-view .dice-tray{
+  position:relative;
+  overflow:hidden;
+  perspective:900px;
+  background:
+    radial-gradient(ellipse at 50% -20%,rgba(255,220,160,.16),transparent 48%),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,.018) 0 2px,
+      rgba(0,0,0,.025) 2px 5px,
+      transparent 5px 34px
+    ),
+    repeating-linear-gradient(
+      4deg,
+      rgba(54,25,10,.10) 0 1px,
+      transparent 1px 15px
+    ),
+    linear-gradient(180deg,#754321 0%,#5d3218 46%,#482410 100%)!important;
+  border-color:#2f1a0f!important;
+  box-shadow:
+    inset 0 0 0 2px #9a6538,
+    inset 0 16px 34px rgba(255,205,145,.08),
+    inset 0 -18px 28px rgba(0,0,0,.28),
+    0 10px 24px #0008!important;
+}
+.game-view .dice-tray:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(98deg,transparent 0 19%,rgba(38,16,6,.19) 20%,transparent 21% 57%,rgba(40,17,7,.14) 58%,transparent 59%),
+    linear-gradient(82deg,transparent 0 73%,rgba(255,222,173,.06) 74%,transparent 75%);
+  mix-blend-mode:multiply;
+}
+.game-view .dice-tray:after{
+  inset:9px!important;
+  border:1px solid rgba(238,188,125,.22)!important;
+  border-radius:8px!important;
+}
+
+.single-die-roller{
+  --cube-size:72px;
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:var(--cube-size);
+  height:var(--cube-size);
+  z-index:20;
+  transform-style:preserve-3d;
+  pointer-events:none;
+}
+.single-die-cube{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+}
+.single-die-face{
+  position:absolute;
+  inset:0;
+  display:grid;
+  grid-template:repeat(3,1fr)/repeat(3,1fr);
+  gap:9%;
+  padding:16%;
+  border:1px solid #b8afa2;
+  border-radius:14%;
+  background:
+    radial-gradient(circle at 30% 22%,rgba(255,255,255,.92),transparent 25%),
+    linear-gradient(145deg,#fffdf6 0%,#ece4d6 62%,#b9b0a3 100%);
+  box-shadow:
+    inset 5px 5px 10px rgba(255,255,255,.72),
+    inset -6px -7px 10px rgba(94,82,70,.38);
+  backface-visibility:hidden;
+}
+.single-die-face i{border-radius:50%}
+.single-die-face .pip{
+  background:#202320;
+  box-shadow:inset 0 2px 2px #0008,0 1px 1px #fff7;
+}
+.single-die-face.front{transform:translateZ(calc(var(--cube-size)/2))}
+.single-die-face.back{transform:rotateY(180deg) translateZ(calc(var(--cube-size)/2))}
+.single-die-face.right{transform:rotateY(90deg) translateZ(calc(var(--cube-size)/2))}
+.single-die-face.left{transform:rotateY(-90deg) translateZ(calc(var(--cube-size)/2))}
+.single-die-face.top{transform:rotateX(90deg) translateZ(calc(var(--cube-size)/2))}
+.single-die-face.bottom{transform:rotateX(-90deg) translateZ(calc(var(--cube-size)/2))}
+.single-die-shadow{
+  position:absolute;
+  left:50%;
+  top:94%;
+  width:82%;
+  height:24%;
+  border-radius:50%;
+  background:rgba(18,8,3,.42);
+  filter:blur(7px);
+  transform:translate(-50%,-50%);
+}
+
+@media(max-width:720px){
+  .game-view .dice-tray{min-height:170px!important}
+  .game-view .dice-row{min-height:136px!important}
+  .single-die-roller{--cube-size:58px}
+}
+@media(max-width:390px){
+  .game-view .dice-tray{min-height:160px!important}
+  .game-view .dice-row{min-height:128px!important}
+  .single-die-roller{--cube-size:54px}
+}

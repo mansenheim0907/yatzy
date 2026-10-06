@@ -78,37 +78,75 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
  const style=p?`style="--tx:${p.x}px;--ty:${p.y}px;--rz:${p.rz}deg;--rx:${p.rx}deg;--ry:${p.ry}deg"`:'';
  return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" data-roll-order="${Math.max(0,rollOrder)}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
 }
+function cubePips(value){
+ return Array.from({length:9},(_,i)=>`<i class="${dots[value].includes(i+1)?'pip':''}"></i>`).join('');
+}
+function singleDieCube(value){
+ const side=n=>((value+n-2)%6)+1;
+ return `<div class="single-die-roller" aria-hidden="true"><div class="single-die-shadow"></div><div class="single-die-cube"><div class="single-die-face front">${cubePips(value)}</div><div class="single-die-face back">${cubePips(side(2))}</div><div class="single-die-face right">${cubePips(side(3))}</div><div class="single-die-face left">${cubePips(side(4))}</div><div class="single-die-face top">${cubePips(side(5))}</div><div class="single-die-face bottom">${cubePips(side(6))}</div></div></div>`;
+}
 function animateDiceRoll(){
  if(!rollAnimationPending||busy||!rollingIndices.length)return;
  rollAnimationPending=false;
  const seq=rollSequence;
- const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const animations=[];
- for(const index of rollingIndices){
-  const el=root.querySelector(`[data-die="${index}"]`);
-  const p=diceLanding[index];
-  if(!el||!p)continue;
-  if(reduceMotion){
-   el.style.transform=`translate3d(${p.x}px,${p.y}px,0) rotateZ(${p.rz}deg)`;
-   continue;
-  }
-  const final=`translate3d(${p.x}px,${p.y}px,0) rotateZ(${p.rz}deg) scale(1)`;
-  const frames=[
-   {offset:0,transform:`translate3d(${p.entryX}px,${p.entryY}px,72px) rotateX(0deg) rotateY(0deg) rotateZ(0deg) scale(.92)`,filter:'blur(.7px)'},
-   {offset:.34,transform:`translate3d(${p.x+p.sideKick}px,${p.y-p.bounce1}px,34px) rotateX(${p.spinX*.46}deg) rotateY(${p.spinY*.46}deg) rotateZ(${p.spinZ*.46}deg) scale(1.025)`,filter:'blur(.25px)'},
-   {offset:.58,transform:`translate3d(${p.x-p.sideKick*.45}px,${p.y+5}px,0) rotateX(${p.spinX*.70}deg) rotateY(${p.spinY*.70}deg) rotateZ(${p.spinZ*.70}deg) scale(.985)`,filter:'none'},
-   {offset:.72,transform:`translate3d(${p.x+p.sideKick*.2}px,${p.y-p.bounce2}px,15px) rotateX(${p.spinX*.84}deg) rotateY(${p.spinY*.84}deg) rotateZ(${p.spinZ*.84}deg) scale(1.01)`},
-   {offset:.86,transform:`translate3d(${p.x-2}px,${p.y+1}px,0) rotateX(${p.spinX*.95}deg) rotateY(${p.spinY*.95}deg) rotateZ(${p.spinZ*.95}deg) scale(.996)`},
-   {offset:1,transform:final,filter:'none'}
-  ];
-  const animation=el.animate(frames,{duration:p.duration,delay:p.delay,easing:'cubic-bezier(.16,.72,.2,1)',fill:'forwards'});
-  animations.push(animation.finished.catch(()=>{}));
+ const index=rollingIndices[0];
+ const el=root.querySelector(`[data-die="${index}"]`);
+ const tray=root.querySelector('.dice-tray');
+ const p=diceLanding[index];
+ if(!el||!tray||!p){rollingIndices=[];render();return;}
+
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches){
+  rollingIndices=[];
+  render();
+  return;
  }
- if(!animations.length){
-  rollingIndices=[];render();return;
- }
- Promise.all(animations).then(()=>{
+
+ el.style.visibility='hidden';
+ tray.insertAdjacentHTML('beforeend',singleDieCube(room.dice[index]));
+ const roller=tray.querySelector('.single-die-roller');
+ const cube=roller.querySelector('.single-die-cube');
+ const shadow=roller.querySelector('.single-die-shadow');
+
+ const direction=Math.random()<.5?-1:1;
+ const startX=direction<0?-tray.clientWidth*.42:tray.clientWidth*.42;
+ const finishX=(Math.random()-.5)*tray.clientWidth*.22;
+ const finishY=(Math.random()-.5)*tray.clientHeight*.14;
+ const spinX=direction*(720+Math.random()*360);
+ const spinY=-direction*(540+Math.random()*360);
+ const spinZ=(Math.random()-.5)*240;
+ const duration=1750+Math.random()*280;
+
+ const travel=roller.animate([
+  {offset:0,transform:`translate3d(calc(-50% + ${startX}px),calc(-50% - 36px),80px)`},
+  {offset:.42,transform:`translate3d(calc(-50% + ${finishX-18}px),calc(-50% + ${finishY-18}px),30px)`},
+  {offset:.60,transform:`translate3d(calc(-50% + ${finishX+8}px),calc(-50% + ${finishY+3}px),0)`},
+  {offset:.73,transform:`translate3d(calc(-50% + ${finishX-5}px),calc(-50% + ${finishY-9}px),13px)`},
+  {offset:.86,transform:`translate3d(calc(-50% + ${finishX+2}px),calc(-50% + ${finishY+1}px),0)`},
+  {offset:.94,transform:`translate3d(calc(-50% + ${finishX}px),calc(-50% + ${finishY-3}px),5px)`},
+  {offset:1,transform:`translate3d(calc(-50% + ${finishX}px),calc(-50% + ${finishY}px),0)`}
+ ],{duration,easing:'cubic-bezier(.17,.68,.2,1)',fill:'forwards'});
+
+ const tumble=cube.animate([
+  {offset:0,transform:'rotateX(0deg) rotateY(0deg) rotateZ(0deg)'},
+  {offset:.42,transform:`rotateX(${spinX*.48}deg) rotateY(${spinY*.48}deg) rotateZ(${spinZ*.48}deg)`},
+  {offset:.60,transform:`rotateX(${spinX*.69}deg) rotateY(${spinY*.69}deg) rotateZ(${spinZ*.69}deg)`},
+  {offset:.73,transform:`rotateX(${spinX*.83}deg) rotateY(${spinY*.83}deg) rotateZ(${spinZ*.83}deg)`},
+  {offset:.86,transform:`rotateX(${spinX*.94}deg) rotateY(${spinY*.94}deg) rotateZ(${spinZ*.94}deg)`},
+  {offset:.94,transform:'rotateX(718deg) rotateY(-719deg) rotateZ(359deg)'},
+  {offset:1,transform:'rotateX(720deg) rotateY(-720deg) rotateZ(360deg)'}
+ ],{duration,easing:'cubic-bezier(.18,.65,.22,1)',fill:'forwards'});
+
+ shadow.animate([
+  {offset:0,opacity:.08,transform:'translate(-50%,-50%) scale(.5)'},
+  {offset:.60,opacity:.34,transform:'translate(-50%,-50%) scale(1.08)'},
+  {offset:.73,opacity:.18,transform:'translate(-50%,-50%) scale(.78)'},
+  {offset:1,opacity:.34,transform:'translate(-50%,-50%) scale(1)'}
+ ],{duration,easing:'ease-out',fill:'forwards'});
+
+ Promise.all([travel.finished.catch(()=>{}),tumble.finished.catch(()=>{})]).then(()=>{
   if(seq!==rollSequence)return;
+  roller.remove();
+  el.style.visibility='';
   rollingIndices=[];
   clearTimeout(rollAnimationTimer);
   render();
@@ -279,15 +317,14 @@ async function act(action,payload={}){
   const next=await command(action,token,room.id,{...payload,version:room.version});
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
-   rollingIndices=rerolled;
+   rollingIndices=rerolled.length?[rerolled[0]]:[];
    rollSequence+=1;
-   rollAnimationPending=true;
+   rollAnimationPending=rollingIndices.length>0;
    clearTimeout(rollAnimationTimer);
    apply(next);
-   const longest=Math.max(0,...rerolled.map(i=>diceLanding[i].duration+diceLanding[i].delay));
    rollAnimationTimer=setTimeout(()=>{
-    if(rollingIndices.length&&rollAnimationPending===false){rollingIndices=[];render();}
-   },longest+350);
+    if(rollingIndices.length){rollingIndices=[];render();}
+   },2400);
   }else{
    apply(next);
   }
