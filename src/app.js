@@ -23,13 +23,75 @@ let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.ava
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dots={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
-function avatarStyle(id){
- const i=Math.max(0,Math.min(19,Number(id)||0));
- const col=i%5,row=Math.floor(i/5);
- return `--avatar-x:${col*25}%;--avatar-y:${row*(100/3)}%`;
-}
+const avatarProfiles=[
+ ['#d8a27d','#141414','#17211f','buzz','shades','beard'],
+ ['#d39a78','#2b1716','#161b1a','bun','hoop','none'],
+ ['#c98d67','#6f5a4b','#1e2623','messy','none','stubble'],
+ ['#e2b08a','#c98f52','#25201b','waves','none','none'],
+ ['#c98f69','#181716','#161c1a','cap','none','stubble'],
+ ['#b97756','#2b1718','#161817','long','tattoo','none'],
+ ['#c58d69','#b7b2aa','#18201d','crop','shades','beard'],
+ ['#d08f73','#d01f66','#17191a','mohawk','piercing','none'],
+ ['#cc916c','#3b271d','#21201c','messy','none','stubble'],
+ ['#e0aa82','#d3a86a','#161918','beanie','none','none'],
+ ['#c89270','#5a3b25','#253321','curly','none','none'],
+ ['#dd9b76','#b73522','#1e2b22','waves','none','none'],
+ ['#b87354','#191817','#171a18','fade','tattoo','beard'],
+ ['#d49a75','#211817','#171918','bun','hoop','none'],
+ ['#c58c67','#b78b55','#171817','capback','shades','stubble'],
+ ['#d59a76','#3a2520','#171918','bob','piercing','none'],
+ ['#c38a68','#77706b','#291a17','side','none','stubble'],
+ ['#dda77f','#c89255','#17211e','bun','none','none'],
+ ['#c99573','#39291f','#20201f','messy','glasses','stubble'],
+ ['#d8a17f','#3a1f1c','#211b1a','long','none','none']
+];
 function avatarArt(id){
- return `<span class="avatar-art" style="${avatarStyle(id)}" aria-hidden="true"></span>`;
+ const i=Math.max(0,Math.min(19,Number(id)||0));
+ const [skin,hair,jacket,hairType,accessory,beard]=avatarProfiles[i];
+ const flip=[1,4,5,8,9,13,17].includes(i);
+ const faceRx=[27,25,28,25,26][i%5], faceRy=[31,30,32,29,31][i%5];
+ const eyeY=48+(i%3-1)*1.5;
+ const hairSvg={
+  buzz:`<path d="M37 39c5-15 36-18 48-2-13-6-34-5-48 2Z" fill="${hair}"/>`,
+  bun:`<circle cx="70" cy="24" r="14" fill="${hair}"/><path d="M32 43c7-21 49-22 57 1-10-8-44-9-57-1Z" fill="${hair}"/>`,
+  messy:`<path d="M28 45c3-9 10-18 18-20l4 7 7-12 7 11 9-9 4 10 11-4-2 17c-14-9-43-10-58 0Z" fill="${hair}"/>`,
+  waves:`<path d="M27 43c7-23 50-25 62-3-9-4-11-13-17-13-2 7-7 9-13 3-4 8-10 8-15 2-4 5-9 8-17 11Z" fill="${hair}"/>`,
+  cap:`<path d="M31 37c7-16 39-19 53-5l-3 10c-15-8-35-8-50-1Z" fill="#161b22"/><path d="M78 39c11-1 17 2 20 7-10 1-19 0-26-2Z" fill="#11151a"/>`,
+  long:`<path d="M25 43c5-26 54-28 64-1l3 42-15-2 1-35c-13-10-29-9-41 0l1 35-15 2Z" fill="${hair}"/>`,
+  crop:`<path d="M30 41c8-17 43-20 55-3-14-4-37-3-55 3Z" fill="${hair}"/>`,
+  mohawk:`<path d="M51 38 58 10l8 19 10-14 3 25c-11-5-19-6-28-2Z" fill="${hair}"/>`,
+  beanie:`<path d="M30 38c5-18 45-22 56-3l-1 13H31Z" fill="#17191c"/><path d="M31 44h54v8H31Z" fill="#111316"/>`,
+  curly:`<g fill="${hair}"><circle cx="38" cy="33" r="10"/><circle cx="51" cy="27" r="11"/><circle cx="65" cy="28" r="11"/><circle cx="78" cy="35" r="10"/></g>`,
+  fade:`<path d="M34 40c10-18 39-19 49-2-14-5-33-4-49 2Z" fill="${hair}"/><path d="M35 41c0 10-2 18-5 25" stroke="#34231d" stroke-width="5"/>`,
+  capback:`<path d="M29 38c8-17 40-20 55-5l-2 10c-15-7-35-8-53-2Z" fill="#191b20"/><path d="M35 34 22 39l12 5Z" fill="#121419"/>`,
+  bob:`<path d="M28 42c7-23 48-24 60-4l-4 39-12-4 3-29c-10-9-27-9-37 0l3 29-13 4Z" fill="${hair}"/>`,
+  side:`<path d="M27 43c8-23 52-23 61-4-18-9-34-8-47-2-5 2-9 4-14 6Z" fill="${hair}"/>`
+ }[hairType]||'';
+ const beardSvg=beard==='beard'? `<path d="M42 65c7 18 28 20 36 0-3 24-31 27-36 0Z" fill="${hair}" opacity=".95"/>` :
+ beard==='stubble'? `<path d="M42 66c8 13 26 15 35 0-6 16-28 18-35 0Z" fill="${hair}" opacity=".48"/>`:'';
+ const accSvg=accessory==='shades'? `<g fill="#111"><rect x="35" y="47" width="18" height="9" rx="3"/><rect x="65" y="47" width="18" height="9" rx="3"/><rect x="52" y="50" width="14" height="2"/></g>` :
+ accessory==='glasses'? `<g fill="none" stroke="#151515" stroke-width="2"><rect x="35" y="47" width="18" height="10" rx="4"/><rect x="65" y="47" width="18" height="10" rx="4"/><path d="M53 51h12"/></g>` :
+ accessory==='hoop'? `<circle cx="83" cy="65" r="5" fill="none" stroke="#c59a45" stroke-width="2"/>` :
+ accessory==='piercing'? `<circle cx="80" cy="58" r="2.5" fill="#b6b9bd"/>` :
+ accessory==='tattoo'? `<path d="M28 72c8 2 11 8 15 14M30 77c5-3 10-3 14 0" fill="none" stroke="#263430" stroke-width="2"/>`:'';
+ const scar=[0,6,12].includes(i)?'<path d="M72 39l-5 10" stroke="#8f4e46" stroke-width="2"/>':'';
+ const svg=`<svg class="avatar-svg" viewBox="0 0 112 112" aria-hidden="true">
+ <defs><linearGradient id="bg${i}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#efe0bd"/><stop offset="1" stop-color="#c9a56b"/></linearGradient></defs>
+ <rect width="112" height="112" rx="16" fill="url(#bg${i})"/>
+ <g ${flip?'transform="translate(112 0) scale(-1 1)"':''}>
+ <path d="M18 112c6-24 20-35 38-35s34 11 40 35Z" fill="${jacket}"/>
+ <ellipse cx="56" cy="54" rx="${faceRx}" ry="${faceRy}" fill="${skin}"/>
+ ${hairSvg}
+ ${scar}
+ <g stroke="#2a211d" stroke-width="2.3" stroke-linecap="round">
+   <path d="M39 ${eyeY}l10-1"/><path d="M64 ${eyeY-1}l10 1"/>
+ </g>
+ <circle cx="45" cy="${eyeY}" r="1.6" fill="#111"/><circle cx="69" cy="${eyeY}" r="1.6" fill="#111"/>
+ <path d="M56 51c-2 7-3 11 2 13" fill="none" stroke="#a66b50" stroke-width="2" stroke-linecap="round"/>
+ <path d="M47 69c6 ${i%4===0?'-2':'2'} 14 ${i%4===0?'-2':'2'} 20 0" fill="none" stroke="#7d423b" stroke-width="2.3" stroke-linecap="round"/>
+ ${beardSvg}${accSvg}
+ </g></svg>`;
+ return svg;
 }
 function avatarPicker(){
  return `<div class="avatar-picker"><h3>Välj din profil</h3><div class="avatar-grid mixed">${Array.from({length:20},(_,i)=>`<button type="button" class="avatar-choice ${selectedAvatar===i?'selected':''}" data-avatar="${i}" aria-label="Profil ${i+1}">${avatarArt(i)}</button>`).join('')}</div></div>`;
