@@ -34,3 +34,28 @@ export async function subscribe(room,token,onChange,onStatus){
  });
  return ()=>{void sb.removeChannel(channel);};
 }
+
+
+export async function subscribeOnlinePresence(token,onCount){
+ if(local){onCount(1);return ()=>{};}
+ if(!sb){onCount(0);return ()=>{};}
+ const presenceKey=token.slice(0,24);
+ const channel=sb.channel('yatzy:online',{config:{presence:{key:presenceKey}}});
+ const update=()=>{
+  const state=channel.presenceState();
+  const count=Object.values(state).reduce((sum,entries)=>sum+(Array.isArray(entries)?entries.length:0),0);
+  onCount(count);
+ };
+ channel.on('presence',{event:'sync'},update);
+ channel.on('presence',{event:'join'},update);
+ channel.on('presence',{event:'leave'},update);
+ channel.subscribe(async status=>{
+  if(status==='SUBSCRIBED'){
+   await channel.track({online_at:new Date().toISOString()});
+   update();
+  }
+ });
+ return ()=>{
+  void channel.untrack().finally(()=>sb.removeChannel(channel));
+ };
+}

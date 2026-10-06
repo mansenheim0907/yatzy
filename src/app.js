@@ -1,6 +1,6 @@
 import './style.css';
 import {categories,score,totals} from './rules.js';
-import {configured,local,identity,command,subscribe} from './api.js';
+import {configured,local,identity,command,subscribe,subscribeOnlinePresence} from './api.js';
 const root=document.querySelector('#app');
 
 /* Lock browser pull-to-refresh on every screen while keeping normal vertical scrolling. */
@@ -17,7 +17,7 @@ document.addEventListener('touchmove',e=>{
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},presenceUnsubscribe=()=>{},onlineCount=local?1:0,timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
 let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.avatar')??0)));
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
@@ -99,7 +99,7 @@ function bind(selector,fn){const el=root.querySelector(selector);if(el)el.onclic
 function home(){return started?(playerName()?lobby():nameStep()):splash();}
 function splash(){return `<section class="splash splash-art"><button id="start" class="start-hotspot" aria-label="Starta"></button></section>`;}
 function nameStep(){return `<section class="lobby-screen"><section class="lobby tavern-menu name-step"><button id="back-start" class="view-back" type="button" aria-label="Tillbaka till startsidan">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Vad heter du?</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div>${inviteCode?'<p class="invite-note">Du har fått en matchlänk. Ange ditt namn så ansluter du direkt till rummet.</p>':'<p class="name-note">Namnet används under den här sessionen.</p>'}<form id="name-form"><input id="name" aria-label="Ditt spelarnamn" maxlength="20" autocomplete="nickname" placeholder="Ditt spelarnamn" autofocus required>${avatarPicker()}<button class="primary menu-primary">Fortsätt <span>›</span></button></form></section></section>`;}
-function lobby(){const pending=matches.filter(m=>m.status==='playing'&&m.turn===m.seat).length;return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="lobby-profile" aria-label="Vald profil">${avatarArt(selectedAvatar)}</div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p>${matchList(pending)}<button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="back-lobby" class="view-back inline-back" type="button">‹ Tillbaka</button><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
+function lobby(){const pending=matches.filter(m=>m.status==='playing'&&m.turn===m.seat).length;return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="lobby-profile" aria-label="Vald profil">${avatarArt(selectedAvatar)}</div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><div class="lobby-meta"><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p><p class="online-now" aria-live="polite"><i></i><strong>${onlineCount}</strong> online</p></div>${matchList(pending)}<button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="back-lobby" class="view-back inline-back" type="button">‹ Tillbaka</button><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
 function matchList(pending){
  if(matchesLoading&&!matches.length)return '<div class="match-list loading-matches">Hämtar dina matcher …</div>';
  if(!matches.length)return '';
@@ -337,8 +337,21 @@ async function closeRoom(){
  await refreshMatches();render();
 }
 async function watch(){cleanup();unsubscribe=await subscribe(room.id,token,refresh,status=>{connection=status;render();});timer=setInterval(refresh,local?700:5000);await refresh();}
+async function startOnlinePresence(){
+ presenceUnsubscribe();
+ presenceUnsubscribe=()=>{};
+ if(!configured||!token)return;
+ try{
+  presenceUnsubscribe=await subscribeOnlinePresence(token,count=>{
+   if(count!==onlineCount){onlineCount=count;render();}
+  });
+ }catch{
+  onlineCount=local?1:0;
+ }
+}
 window.addEventListener('online',()=>{if(room)refresh();else refreshMatches();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(room)refresh();else refreshMatches();}});matchesTimer=setInterval(()=>{if(!room&&started&&playerName())refreshMatches();},30000);
 render();
+void startOnlinePresence();
 if(room&&recoveringRoom&&configured&&token){
  void watch();
 }else if(savedView&&started&&playerName()){
