@@ -2012,3 +2012,168 @@ body{
 .tavern-menu > .lobby-profile .avatar-portrait{
   border-radius:50%;
 }
+
+
+/* Dedicated cinematic dice-roll component */
+body:has(main.roll-stage-main){
+  min-height:100dvh;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 50% 16%,rgba(118,83,45,.24),transparent 34%),
+    linear-gradient(180deg,#1a4f40 0%,#0b332a 100%);
+}
+body:has(main.roll-stage-main) header,
+body:has(main.roll-stage-main) footer,
+body:has(main.roll-stage-main) .message{display:none}
+main.roll-stage-main{
+  max-width:none;
+  min-height:100dvh;
+  padding:0;
+  margin:0;
+  display:grid;
+  place-items:center;
+  overflow:hidden;
+}
+.roll-stage{
+  width:100%;
+  min-height:100dvh;
+  display:grid;
+  place-items:center;
+  perspective:1050px;
+  overflow:hidden;
+}
+.roll-table{
+  position:relative;
+  width:min(94vw,900px);
+  height:min(72vw,560px);
+  min-height:430px;
+  max-height:72vh;
+  border-radius:48px;
+  transform:rotateX(7deg);
+  transform-style:preserve-3d;
+  background:
+    radial-gradient(ellipse at 50% 34%,rgba(255,255,255,.09),transparent 42%),
+    radial-gradient(ellipse at 50% 100%,rgba(0,0,0,.28),transparent 62%),
+    linear-gradient(145deg,#195846,#0b3b30 62%,#082d26);
+  border:10px solid #75502f;
+  box-shadow:
+    inset 0 0 0 3px #ad7a48,
+    inset 0 28px 55px rgba(0,0,0,.24),
+    0 35px 80px rgba(0,0,0,.45);
+}
+.roll-table::after{
+  content:"";
+  position:absolute;
+  inset:20px;
+  border-radius:34px;
+  border:1px solid rgba(255,255,255,.06);
+  pointer-events:none;
+}
+.roll-dice{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:clamp(16px,4vw,52px);
+  padding:40px;
+  transform-style:preserve-3d;
+}
+.throw-die{
+  --size:clamp(62px,10vw,100px);
+  position:relative;
+  width:var(--size);
+  height:var(--size);
+  flex:0 0 var(--size);
+  transform-style:preserve-3d;
+  animation:throw-flight 1.45s cubic-bezier(.16,.78,.22,1) both;
+  animation-delay:calc(var(--throw-order) * 90ms);
+}
+.throw-cube{
+  position:absolute;
+  inset:0;
+  transform-style:preserve-3d;
+  animation:cube-tumble 1.45s cubic-bezier(.18,.72,.22,1) both;
+  animation-delay:calc(var(--throw-order) * 90ms);
+}
+.throw-face{
+  position:absolute;
+  inset:0;
+  display:grid;
+  grid-template:repeat(3,1fr)/repeat(3,1fr);
+  gap:9%;
+  padding:16%;
+  border:2px solid #c8c0b4;
+  border-radius:18%;
+  color:#173c33;
+  background:
+    radial-gradient(circle at 28% 20%,#fff 0 7%,transparent 29%),
+    linear-gradient(145deg,#fffef8 0%,#f2ebdc 58%,#c5bdb0 100%);
+  box-shadow:inset 5px 5px 9px #fff,inset -7px -8px 12px #b4aca0;
+  backface-visibility:hidden;
+}
+.throw-face i{border-radius:50%}
+.throw-face .pip{
+  background:currentColor;
+  box-shadow:inset 0 2px 2px #0006,0 1px 1px #fff8;
+}
+.throw-face.front{transform:translateZ(calc(var(--size)/2))}
+.throw-face.back{transform:rotateY(180deg) translateZ(calc(var(--size)/2))}
+.throw-face.right{transform:rotateY(90deg) translateZ(calc(var(--size)/2))}
+.throw-face.left{transform:rotateY(-90deg) translateZ(calc(var(--size)/2))}
+.throw-face.top{transform:rotateX(90deg) translateZ(calc(var(--size)/2))}
+.throw-face.bottom{transform:rotateX(-90deg) translateZ(calc(var(--size)/2))}
+.throw-shadow{
+  position:absolute;
+  left:5%;
+  right:5%;
+  bottom:-28%;
+  height:28%;
+  border-radius:50%;
+  background:rgba(0,0,0,.32);
+  filter:blur(8px);
+  transform:translateZ(-60px);
+  animation:throw-shadow 1.45s ease-out both;
+  animation-delay:calc(var(--throw-order) * 90ms);
+}
+@keyframes throw-flight{
+  0%{opacity:.1;transform:translate3d(calc(var(--drift) - 180px),-210px,240px) scale(.72)}
+  38%{opacity:1;transform:translate3d(calc(var(--drift) - 45px),-72px,150px) scale(.94)}
+  64%{transform:translate3d(calc(var(--drift) + 18px),18px,42px) scale(1.03)}
+  77%{transform:translate3d(calc(var(--drift) - 7px),-14px,24px) scale(.985)}
+  88%{transform:translate3d(calc(var(--drift) + 3px),5px,7px) scale(1.006)}
+  100%{opacity:1;transform:translate3d(var(--drift),0,0) scale(1)}
+}
+@keyframes cube-tumble{
+  0%{transform:rotateX(25deg) rotateY(-30deg) rotateZ(8deg)}
+  35%{transform:rotateX(610deg) rotateY(-485deg) rotateZ(300deg)}
+  64%{transform:rotateX(940deg) rotateY(-740deg) rotateZ(470deg)}
+  77%{transform:rotateX(1080deg) rotateY(-900deg) rotateZ(535deg)}
+  88%{transform:rotateX(1072deg) rotateY(-894deg) rotateZ(542deg)}
+  100%{transform:rotateX(1080deg) rotateY(-900deg) rotateZ(540deg)}
+}
+@keyframes throw-shadow{
+  0%,38%{opacity:.05;transform:translate3d(-35px,20px,-60px) scale(.45)}
+  70%{opacity:.2;transform:translate3d(8px,5px,-60px) scale(.82)}
+  100%{opacity:.34;transform:translate3d(0,0,-60px) scale(1)}
+}
+@media(max-width:600px){
+  .roll-table{
+    width:94vw;
+    height:68vh;
+    min-height:390px;
+    max-height:620px;
+    border-width:7px;
+    border-radius:30px;
+  }
+  .roll-dice{
+    flex-wrap:wrap;
+    align-content:center;
+    gap:34px 24px;
+    padding:36px 26px;
+  }
+  .throw-die{--size:clamp(64px,20vw,84px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .throw-die,.throw-cube,.throw-shadow{animation-duration:.01ms;animation-delay:0ms}
+}

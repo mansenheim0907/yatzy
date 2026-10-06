@@ -17,7 +17,7 @@ document.addEventListener('touchmove',e=>{
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer,rollScene=null;
 let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.avatar')??0)));
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
@@ -65,8 +65,22 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
  const style=p?`style="--tx:${p.x}px;--ty:${p.y}px;--rz:${p.rz}deg;--rx:${p.rx}deg;--ry:${p.ry}deg;--throw-x:${p.throwX??0}px;--roll-order:${Math.max(0,rollOrder)}"`:'';
  return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
 }
+
+function throwFace(value,face){
+ return `<div class="throw-face ${face}">${Array.from({length:9},(_,i)=>`<i class="${dots[value].includes(i+1)?'pip':''}"></i>`).join('')}</div>`;
+}
+function throwDie(value,order){
+ const side=n=>((value+n-2)%6)+1;
+ const drift=(order-2)*24;
+ return `<div class="throw-die" style="--throw-order:${order};--drift:${drift}px"><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span></div>`;
+}
+function rollSceneView(){
+ const values=rollScene?.values||[];
+ return `<section class="roll-stage" aria-label="Tärningarna kastas"><div class="roll-table" aria-hidden="true"><div class="roll-dice">${values.map((n,i)=>throwDie(n,i)).join('')}</div></div></section>`;
+}
 function render(){
  rememberInputs();rememberView();
+ if(rollScene){root.innerHTML=`<main class="roll-stage-main">${rollSceneView()}</main>`;return;}
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
@@ -228,14 +242,17 @@ async function act(action,payload={}){
   const next=await command(action,token,room.id,{...payload,version:room.version});
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
-   rollingIndices=rerolled;
+   rollingIndices=[];
+   rollScene={values:rerolled.map(i=>next.dice[i])};
    clearTimeout(rollAnimationTimer);
-   rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1650);
+   apply(next);
+   rollAnimationTimer=setTimeout(()=>{rollScene=null;render();},2050);
+  }else{
+   apply(next);
   }
-  apply(next);
   if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
  }
- catch(e){rollingIndices=[];message=e.message;await refresh();}finally{busy=false;render();}
+ catch(e){rollingIndices=[];rollScene=null;message=e.message;await refresh();}finally{busy=false;render();}
 }
 async function refresh(){
  if(!room||refreshBusy)return;const id=room.id;refreshBusy=true;
@@ -274,7 +291,7 @@ async function endMatchAndLobby(){
   console.warn('Kunde inte lämna matchen på servern:',e);
  }
  cleanup();
- room=null;codeRoom=false;inviteSent=false;friends=false;subview=null;rollingIndices=[];
+ room=null;codeRoom=false;inviteSent=false;friends=false;subview=null;rollingIndices=[];rollScene=null;
  localStorage.removeItem('yatzy.room');
  history.replaceState({},'',import.meta.env.BASE_URL);
  busy=false;
@@ -330,7 +347,7 @@ async function enterApp(){
  if(playerName())await refreshMatches();
 }
 async function closeRoom(){
- cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];localStorage.removeItem('yatzy.room');message='';
+ cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];rollScene=null;localStorage.removeItem('yatzy.room');message='';
  await refreshMatches();render();
 }
 async function watch(){cleanup();unsubscribe=await subscribe(room.id,token,refresh,status=>{connection=status;render();});timer=setInterval(refresh,local?700:5000);await refresh();}
