@@ -6,10 +6,19 @@ const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
 let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=Boolean(inviteCode),subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
+let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dots={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
-function die(n,held=false,index=null,disabled=false,rollOrder=-1){const rolling=rollOrder>=0;return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${rolling?`style="--roll-order:${rollOrder}"`:''} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;}
+function randomLanding(index){
+ const jitter=(min,max)=>Math.round(min+Math.random()*(max-min));
+ return {x:jitter(-5,5),y:jitter(-9,9),rz:jitter(-10,10),rx:jitter(-14,-6),ry:jitter(-10,10),throwX:(index-2)*18+jitter(-12,12)};
+}
+function die(n,held=false,index=null,disabled=false,rollOrder=-1){
+ const rolling=rollOrder>=0,p=index===null?null:diceLanding[index];
+ const style=p?`style="--tx:${p.x}px;--ty:${p.y}px;--rz:${p.rz}deg;--rx:${p.rx}deg;--ry:${p.ry}deg;--throw-x:${p.throwX??0}px;--roll-order:${Math.max(0,rollOrder)}"`:'';
+ return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
+}
 function render(){
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
@@ -166,9 +175,10 @@ async function act(action,payload={}){
  try{
   const next=await command(action,token,room.id,{...payload,version:room.version});
   if(action==='roll'){
+   rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
    rollingIndices=rerolled;
    clearTimeout(rollAnimationTimer);
-   rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1550);
+   rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1650);
   }
   apply(next);
   if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
