@@ -17,7 +17,7 @@ document.addEventListener('touchmove',e=>{
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer,rollScene=null;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer;
 let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.avatar')??0)));
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
@@ -66,69 +66,8 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
  return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
 }
 
-function throwFace(value,face){
- return `<div class="throw-face ${face}">${Array.from({length:9},(_,i)=>`<i class="${dots[value].includes(i+1)?'pip':''}"></i>`).join('')}</div>`;
-}
-function randomRollLanding(){
- const spinX=(Math.random()<.5?720:1080)*(Math.random()<.5?-1:1);
- const spinY=(Math.random()<.5?720:1080)*(Math.random()<.5?-1:1);
- return {
-  x:14+Math.random()*72,
-  y:16+Math.random()*68,
-  rz:-14+Math.random()*28,
-  startX:-150+Math.random()*300,
-  startY:-210-Math.random()*85,
-  spinX,spinY,
-  midX:Math.round(spinX*.58),
-  midY:Math.round(spinY*.58),
-  lateX:Math.round(spinX*.9),
-  lateY:Math.round(spinY*.9)
- };
-}
-function sceneLandings(previous=[],moving=[0,1,2,3,4]){
- const next=Array.from({length:5},(_,i)=>previous[i]||null);
- const occupied=[];
- next.forEach((p,i)=>{if(p&&!moving.includes(i))occupied.push(p);});
- for(const i of moving){
-  let p=null;
-  for(let tries=0;tries<80;tries++){
-   const candidate=randomRollLanding();
-   const clear=occupied.every(o=>{
-    const dx=candidate.x-o.x,dy=(candidate.y-o.y)*.82;
-    return Math.hypot(dx,dy)>23;
-   });
-   if(clear){p=candidate;break;}
-  }
-  p=p||randomRollLanding();
-  next[i]=p;
-  occupied.push(p);
- }
- return next;
-}
-function throwDie(value,index){
- const side=n=>((value+n-2)%6)+1;
- const rolling=Boolean(rollScene?.rolling&&rollScene.indices?.includes(index));
- const order=Math.max(0,rollScene?.indices?.indexOf(index)??0);
- const held=Boolean(room?.held?.[index]);
- const p=rollScene?.landings?.[index]||randomRollLanding();
- const style=`--throw-order:${order};--land-x:${p.x.toFixed(2)}%;--land-y:${p.y.toFixed(2)}%;--land-rz:${p.rz.toFixed(1)}deg;--start-x:${p.startX.toFixed(0)}px;--start-y:${p.startY.toFixed(0)}px;--spin-x:${p.spinX}deg;--spin-y:${p.spinY}deg;--mid-x:${p.midX}deg;--mid-y:${p.midY}deg;--late-x:${p.lateX}deg;--late-y:${p.lateY}deg`;
- return `<button type="button" class="throw-die ${rolling?'rolling':''} ${held?'held':''}" style="${style}" data-scene-die="${index}" aria-label="Tärning ${index+1}: ${value}${held?', låst':''}" aria-pressed="${held}" ${rollScene?.rolling||busy?'disabled':''}><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span><span class="throw-held-label">${held?'LÅST':''}</span></button>`;
-}
-function rollSceneView(){
- const canReroll=room?.rolls<3&&!room?.held?.every(Boolean);
- const rolling=Boolean(rollScene?.rolling);
- return `<section class="roll-stage" aria-label="Tärningskast"><div class="roll-status"><strong>Kast ${room?.rolls||1} av 3</strong><span>${rolling?'Tärningarna rullar …':'Tryck på en tärning för att låsa den'}</span></div><div class="roll-table"><div class="roll-dice">${(room?.dice||[]).map((n,i)=>throwDie(n,i)).join('')}</div></div><div class="roll-scene-actions">${canReroll?`<button id="scene-roll" class="scene-roll" ${rolling||busy?'disabled':''}>Kasta igen <span>⚄</span></button>`:''}<button id="scene-score" class="scene-score" ${rolling||busy?'disabled':''}>Välj kategori →</button></div></section>`;
-}
 function render(){
  rememberInputs();rememberView();
- if(rollScene){
-  if(rollScene.rolling&&root.querySelector('main.roll-stage-main'))return;
-  root.innerHTML=`<main class="roll-stage-main">${rollSceneView()}</main>`;
-  root.querySelectorAll('[data-scene-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.sceneDie)}));
-  bind('#scene-roll',()=>act('roll'));
-  bind('#scene-score',()=>{rollScene=null;render();});
-  return;
- }
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
@@ -290,20 +229,16 @@ async function act(action,payload={}){
   const next=await command(action,token,room.id,{...payload,version:room.version});
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
-   rollingIndices=[];
-   const previous=rollScene?.landings||[];
-   rollScene={rolling:true,indices:rerolled,landings:sceneLandings(previous,rerolled)};
+   rollingIndices=rerolled;
    clearTimeout(rollAnimationTimer);
    apply(next);
-   rollAnimationTimer=setTimeout(()=>{
-    if(rollScene){rollScene={...rollScene,rolling:false};render();}
-   },3300);
+   rollAnimationTimer=setTimeout(()=>{rollingIndices=[];render();},1450);
   }else{
    apply(next);
   }
   if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
  }
- catch(e){rollingIndices=[];rollScene=null;message=e.message;await refresh();}finally{busy=false;render();}
+ catch(e){rollingIndices=[];message=e.message;await refresh();}finally{busy=false;render();}
 }
 async function refresh(){
  if(!room||refreshBusy)return;const id=room.id;refreshBusy=true;
@@ -342,7 +277,7 @@ async function endMatchAndLobby(){
   console.warn('Kunde inte lämna matchen på servern:',e);
  }
  cleanup();
- room=null;codeRoom=false;inviteSent=false;friends=false;subview=null;rollingIndices=[];rollScene=null;
+ room=null;codeRoom=false;inviteSent=false;friends=false;subview=null;rollingIndices=[];
  localStorage.removeItem('yatzy.room');
  history.replaceState({},'',import.meta.env.BASE_URL);
  busy=false;
@@ -398,7 +333,7 @@ async function enterApp(){
  if(playerName())await refreshMatches();
 }
 async function closeRoom(){
- cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];rollScene=null;localStorage.removeItem('yatzy.room');message='';
+ cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];localStorage.removeItem('yatzy.room');message='';
  await refreshMatches();render();
 }
 async function watch(){cleanup();unsubscribe=await subscribe(room.id,token,refresh,status=>{connection=status;render();});timer=setInterval(refresh,local?700:5000);await refresh();}
