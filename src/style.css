@@ -2319,3 +2319,76 @@ main.roll-stage-main{
     animation-delay:0ms;
   }
 }
+
+
+/* Natural scattered landings; each roll animates exactly once */
+.roll-dice{
+  display:block!important;
+  position:absolute!important;
+  inset:0!important;
+  padding:0!important;
+}
+.throw-die{
+  position:absolute!important;
+  left:var(--land-x)!important;
+  top:var(--land-y)!important;
+  margin:0!important;
+  transform:translate(-50%,-50%) rotateZ(var(--land-rz));
+  transform-style:preserve-3d;
+}
+.throw-die:not(.rolling){
+  transform:translate(-50%,-50%) rotateZ(var(--land-rz))!important;
+}
+.throw-die:not(.rolling) .throw-cube{
+  transform:rotateX(0deg) rotateY(0deg) rotateZ(0deg)!important;
+}
+.throw-die.rolling{
+  animation:throw-flight-natural 2.55s cubic-bezier(.15,.7,.18,1) both!important;
+  animation-delay:calc(var(--throw-order) * 110ms)!important;
+}
+.throw-die.rolling .throw-cube{
+  animation:cube-tumble-natural 2.55s cubic-bezier(.17,.67,.2,1) both!important;
+  animation-delay:calc(var(--throw-order) * 110ms)!important;
+}
+.throw-die.rolling .throw-shadow{
+  animation:throw-shadow-natural 2.55s ease-out both!important;
+  animation-delay:calc(var(--throw-order) * 110ms)!important;
+}
+@keyframes throw-flight-natural{
+  0%{
+    opacity:.12;
+    transform:translate3d(calc(-50% + var(--start-x)),calc(-50% + var(--start-y)),230px) rotateZ(calc(var(--land-rz) - 18deg)) scale(.78);
+  }
+  46%{
+    opacity:1;
+    transform:translate3d(calc(-50% + var(--start-x) * .18),calc(-50% - 34px),78px) rotateZ(calc(var(--land-rz) + 7deg)) scale(.98);
+  }
+  64%{
+    transform:translate3d(calc(-50% + 13px),calc(-50% + 10px),18px) rotateZ(calc(var(--land-rz) - 4deg)) scale(1.025);
+  }
+  76%{
+    transform:translate3d(calc(-50% - 7px),calc(-50% - 8px),32px) rotateZ(calc(var(--land-rz) + 3deg)) scale(.99);
+  }
+  88%{
+    transform:translate3d(calc(-50% + 3px),calc(-50% + 2px),7px) rotateZ(calc(var(--land-rz) - 1deg)) scale(1.004);
+  }
+  100%{
+    opacity:1;
+    transform:translate3d(-50%,-50%,0) rotateZ(var(--land-rz)) scale(1);
+  }
+}
+@keyframes cube-tumble-natural{
+  0%{transform:rotateX(8deg) rotateY(-12deg) rotateZ(0deg)}
+  46%{transform:rotateX(var(--mid-x)) rotateY(var(--mid-y)) rotateZ(210deg)}
+  76%{transform:rotateX(var(--late-x)) rotateY(var(--late-y)) rotateZ(332deg)}
+  90%{transform:rotateX(calc(var(--spin-x) - 18deg)) rotateY(calc(var(--spin-y) + 12deg)) rotateZ(calc(var(--land-rz) - 5deg))}
+  100%{transform:rotateX(var(--spin-x)) rotateY(var(--spin-y)) rotateZ(0deg)}
+}
+@keyframes throw-shadow-natural{
+  0%,38%{opacity:.03;transform:translate3d(-22px,20px,-60px) scale(.42)}
+  62%{opacity:.18;transform:translate3d(8px,5px,-60px) scale(.76)}
+  100%{opacity:.34;transform:translate3d(0,0,-60px) scale(1)}
+}
+@media(max-width:600px){
+  .roll-dice{padding:0!important}
+}

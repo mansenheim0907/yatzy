@@ -69,13 +69,50 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
 function throwFace(value,face){
  return `<div class="throw-face ${face}">${Array.from({length:9},(_,i)=>`<i class="${dots[value].includes(i+1)?'pip':''}"></i>`).join('')}</div>`;
 }
+function randomRollLanding(){
+ const spinX=(Math.random()<.5?720:1080)*(Math.random()<.5?-1:1);
+ const spinY=(Math.random()<.5?720:1080)*(Math.random()<.5?-1:1);
+ return {
+  x:14+Math.random()*72,
+  y:16+Math.random()*68,
+  rz:-14+Math.random()*28,
+  startX:-150+Math.random()*300,
+  startY:-210-Math.random()*85,
+  spinX,spinY,
+  midX:Math.round(spinX*.58),
+  midY:Math.round(spinY*.58),
+  lateX:Math.round(spinX*.9),
+  lateY:Math.round(spinY*.9)
+ };
+}
+function sceneLandings(previous=[],moving=[0,1,2,3,4]){
+ const next=Array.from({length:5},(_,i)=>previous[i]||null);
+ const occupied=[];
+ next.forEach((p,i)=>{if(p&&!moving.includes(i))occupied.push(p);});
+ for(const i of moving){
+  let p=null;
+  for(let tries=0;tries<80;tries++){
+   const candidate=randomRollLanding();
+   const clear=occupied.every(o=>{
+    const dx=candidate.x-o.x,dy=(candidate.y-o.y)*.82;
+    return Math.hypot(dx,dy)>23;
+   });
+   if(clear){p=candidate;break;}
+  }
+  p=p||randomRollLanding();
+  next[i]=p;
+  occupied.push(p);
+ }
+ return next;
+}
 function throwDie(value,index){
  const side=n=>((value+n-2)%6)+1;
  const rolling=Boolean(rollScene?.rolling&&rollScene.indices?.includes(index));
  const order=Math.max(0,rollScene?.indices?.indexOf(index)??0);
- const drift=(index-2)*22;
  const held=Boolean(room?.held?.[index]);
- return `<button type="button" class="throw-die ${rolling?'rolling':''} ${held?'held':''}" style="--throw-order:${order};--drift:${drift}px" data-scene-die="${index}" aria-label="Tärning ${index+1}: ${value}${held?', låst':''}" aria-pressed="${held}" ${rollScene?.rolling||busy?'disabled':''}><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span><span class="throw-held-label">${held?'LÅST':''}</span></button>`;
+ const p=rollScene?.landings?.[index]||randomRollLanding();
+ const style=`--throw-order:${order};--land-x:${p.x.toFixed(2)}%;--land-y:${p.y.toFixed(2)}%;--land-rz:${p.rz.toFixed(1)}deg;--start-x:${p.startX.toFixed(0)}px;--start-y:${p.startY.toFixed(0)}px;--spin-x:${p.spinX}deg;--spin-y:${p.spinY}deg;--mid-x:${p.midX}deg;--mid-y:${p.midY}deg;--late-x:${p.lateX}deg;--late-y:${p.lateY}deg`;
+ return `<button type="button" class="throw-die ${rolling?'rolling':''} ${held?'held':''}" style="${style}" data-scene-die="${index}" aria-label="Tärning ${index+1}: ${value}${held?', låst':''}" aria-pressed="${held}" ${rollScene?.rolling||busy?'disabled':''}><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span><span class="throw-held-label">${held?'LÅST':''}</span></button>`;
 }
 function rollSceneView(){
  const canReroll=room?.rolls<3&&!room?.held?.every(Boolean);
@@ -85,6 +122,7 @@ function rollSceneView(){
 function render(){
  rememberInputs();rememberView();
  if(rollScene){
+  if(rollScene.rolling&&root.querySelector('main.roll-stage-main'))return;
   root.innerHTML=`<main class="roll-stage-main">${rollSceneView()}</main>`;
   root.querySelectorAll('[data-scene-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.sceneDie)}));
   bind('#scene-roll',()=>act('roll'));
@@ -253,12 +291,13 @@ async function act(action,payload={}){
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
    rollingIndices=[];
-   rollScene={rolling:true,indices:rerolled};
+   const previous=rollScene?.landings||[];
+   rollScene={rolling:true,indices:rerolled,landings:sceneLandings(previous,rerolled)};
    clearTimeout(rollAnimationTimer);
    apply(next);
    rollAnimationTimer=setTimeout(()=>{
     if(rollScene){rollScene={...rollScene,rolling:false};render();}
-   },3000);
+   },3300);
   }else{
    apply(next);
   }
