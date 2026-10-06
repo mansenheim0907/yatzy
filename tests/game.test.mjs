@@ -161,3 +161,28 @@ test('lägre poäng i omgången tappar energi i båda riktningar och lika ger in
  assert.equal(r.last_damage,0);
  assert.equal(r.last_damaged,null);
 });
+
+
+test('valda profiler följer med matchen',async()=>{
+ const a=token(),b=token();
+ const wait=await call('create',a,null,{name:'Ada',avatar:4});
+ const room=await call('join',b,null,{name:'Bo',code:wait.code,avatar:17});
+ assert.deepEqual(room.avatars,[4,17]);
+ assert.deepEqual((await call('get',a,room)).avatars,[4,17]);
+});
+
+test('nästa spelare ser föregående spelares sista tärningar före sitt första kast',async()=>{
+ const {a,b,room}=await pair();let r=room;
+ await db.query("update yatzy_private.rooms set dice='{2,3,4,5,6}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',a,r,{category:'chance'});
+ assert.deepEqual(r.dice,[2,3,4,5,6]);
+ assert.equal(r.rolls,0);
+ assert.deepEqual(r.held,[false,false,false,false,false]);
+ assert.equal(r.turn,1);
+ const before=[...r.dice];
+ r=await call('roll',b,r);
+ assert.equal(r.rolls,1);
+ assert.notDeepEqual(r.dice,[]); 
+ assert.equal(r.dice.length,5);
+ assert.deepEqual(before,[2,3,4,5,6]);
+});
