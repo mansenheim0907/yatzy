@@ -1081,3 +1081,268 @@ body:has(main > .game-view) main{
   .duel-player-top>span{font-size:11px}
   .duel-player-top>strong{font-size:20px}
 }
+
+
+/* Proposal 3: large premium dice table */
+body:has(main > .game-view){
+  background:
+    radial-gradient(circle at 50% 0%,rgba(47,108,78,.34),transparent 30%),
+    linear-gradient(180deg,#103d31 0%,#0b342a 48%,#082c24 100%);
+}
+body:has(main > .game-view) main{
+  max-width:980px;
+  padding:max(14px,env(safe-area-inset-top)) 12px max(24px,env(safe-area-inset-bottom));
+}
+.game-view{padding:0;background:transparent}
+.game-view .game-heading{display:none}
+.duel-logo{
+  border:0;
+  background:transparent;
+  box-shadow:none;
+  margin:0 auto 12px;
+  padding:2px 20px 8px;
+  color:#f0d58c;
+}
+.duel-logo strong{
+  font-size:42px;
+  letter-spacing:0;
+  text-shadow:0 2px 4px #0006;
+}
+.duel-logo span,.duel-logo i{display:none}
+
+.game-view .game-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.game-view .table{
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-areas:
+    "players"
+    "notice"
+    "dice"
+    "roll"
+    "help"
+    "details";
+  gap:12px;
+  padding:0;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
+}
+.game-view .table-top{display:none}
+.player-duel-cards{
+  grid-area:players;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin:0;
+  position:relative;
+}
+.player-duel-cards:after{
+  content:"VS";
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  width:38px;
+  height:38px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#123f34;
+  border:2px solid #d4b45d;
+  color:#f4dda0;
+  font:700 14px Georgia,'Times New Roman',serif;
+  box-shadow:0 4px 10px #0005;
+  z-index:2;
+}
+.duel-player-card,
+.duel-player-card.me{
+  min-height:118px;
+  padding:14px 18px;
+  border:1px solid rgba(216,201,166,.75);
+  border-radius:20px;
+  background:linear-gradient(180deg,#fffdf5,#f1eadb);
+  color:#123d33;
+  box-shadow:0 8px 18px #0004;
+}
+.duel-player-card.active{
+  outline:2px solid #d7b652;
+  outline-offset:1px;
+  box-shadow:0 0 0 2px #2f8756,0 8px 20px #0005;
+}
+.duel-player-top{margin-bottom:12px;align-items:center}
+.duel-player-top>span{font-size:18px}
+.duel-player-top>strong{font-size:34px}
+.duel-player-card.me .energy-label,
+.duel-player-card .energy-label{color:#123d33}
+.duel-player-card .energy-player{padding:0}
+.energy-track{
+  height:12px;
+  border:0;
+  background:#d9d9c8;
+  box-shadow:inset 0 1px 2px #0002;
+}
+.duel-player-card.me .energy-track{border:0;background:#d9d9c8}
+.energy-track i{background:linear-gradient(90deg,#38a35d,#79b94f)}
+
+.combat-notice{grid-area:notice;margin:0 2px}
+
+.dice-tray{
+  grid-area:dice;
+  min-height:430px;
+  padding:0;
+  border:5px solid #6d401f;
+  border-radius:38px;
+  background:
+    radial-gradient(circle at 48% 35%,rgba(45,105,73,.34),transparent 45%),
+    linear-gradient(180deg,#0d4a36,#073828);
+  box-shadow:
+    inset 0 0 0 4px #c4a24e,
+    inset 0 18px 38px #0007,
+    0 14px 26px #0006;
+  overflow:hidden;
+}
+.game-view .dice-row{
+  position:relative;
+  display:block;
+  width:100%;
+  min-height:420px;
+  margin:0;
+}
+.game-view .dice-row .die{
+  position:absolute;
+  width:82px;
+  height:82px;
+  padding:13px;
+  border-radius:18px;
+  z-index:1;
+}
+.game-view .dice-row .die:nth-child(1){left:15%;top:20%}
+.game-view .dice-row .die:nth-child(2){left:43%;top:36%}
+.game-view .dice-row .die:nth-child(3){right:14%;top:18%}
+.game-view .dice-row .die:nth-child(4){left:23%;bottom:13%}
+.game-view .dice-row .die:nth-child(5){right:20%;bottom:12%}
+.game-view .die span{top:94px;color:#f1ddaa;text-shadow:0 1px 3px #000}
+
+.game-view .roll{
+  grid-area:roll;
+  justify-self:center;
+  width:min(560px,72%);
+  min-height:70px;
+  margin-top:-2px;
+  border:2px solid #f0cf68;
+  border-radius:999px;
+  background:linear-gradient(180deg,#f2d16c,#d7a934);
+  box-shadow:inset 0 1px 0 #fff7,0 9px 18px #0005;
+  color:#143a31;
+  font:700 29px Georgia,'Times New Roman',serif;
+  text-shadow:none;
+}
+.game-view .roll:hover:not(:disabled){background:linear-gradient(180deg,#f6db7e,#dfb344)}
+.game-view .dice-help{
+  grid-area:help;
+  margin:0;
+  text-align:center;
+  color:#e7d8b2;
+  font-size:13px;
+}
+.game-view details{
+  grid-area:details;
+  justify-self:center;
+  width:max-content;
+  max-width:100%;
+  border:0;
+  background:transparent;
+  padding:0;
+  color:#ead9aa;
+  font-size:13px;
+}
+.game-view details summary{
+  padding:4px 8px;
+  font-weight:700;
+}
+.game-view details p{
+  width:min(680px,88vw);
+  padding:12px 14px;
+  border-radius:12px;
+  background:#f6edd7;
+  color:#4f493d;
+}
+
+.game-view .scorecard{
+  margin-top:2px;
+  border:2px solid #d1b66c;
+  border-radius:28px;
+  background:linear-gradient(180deg,#fffdf6,#f0e9da);
+  box-shadow:0 14px 30px #0005;
+  padding:22px 20px;
+}
+.game-view .score-title h2{font-size:40px;color:#123d33}
+.game-view .score-columns{gap:18px}
+.game-view .score-columns table{
+  border:0;
+  border-radius:14px;
+  background:#f7f2e8;
+  box-shadow:none;
+}
+.game-view thead{background:#ebe5d7}
+.game-view thead th{color:#183f35}
+.game-view td button{
+  border:1px solid #9db28d;
+  background:#e8efd9;
+  color:#173f37;
+}
+
+@media(max-width:720px){
+  body:has(main > .game-view) main{padding:8px 6px 16px}
+  .duel-logo{margin-bottom:5px;padding-bottom:5px}
+  .duel-logo strong{font-size:31px}
+  .player-duel-cards{gap:8px}
+  .player-duel-cards:after{width:30px;height:30px;font-size:10px}
+  .duel-player-card,.duel-player-card.me{
+    min-height:90px;
+    padding:9px 10px;
+    border-radius:14px;
+  }
+  .duel-player-top{margin-bottom:7px}
+  .duel-player-top>span{font-size:12px}
+  .duel-player-top>strong{font-size:24px}
+  .duel-player-top small{font-size:8px}
+  .energy-label{font-size:8px}
+  .energy-track{height:9px}
+
+  .dice-tray{
+    min-height:310px;
+    border-width:4px;
+    border-radius:26px;
+  }
+  .game-view .dice-row{min-height:302px}
+  .game-view .dice-row .die{
+    width:58px;
+    height:58px;
+    padding:9px;
+    border-radius:13px;
+  }
+  .game-view .dice-row .die:nth-child(1){left:12%;top:17%}
+  .game-view .dice-row .die:nth-child(2){left:43%;top:36%}
+  .game-view .dice-row .die:nth-child(3){right:11%;top:16%}
+  .game-view .dice-row .die:nth-child(4){left:22%;bottom:11%}
+  .game-view .dice-row .die:nth-child(5){right:19%;bottom:10%}
+  .game-view .die span{top:67px;font-size:7px}
+
+  .game-view .roll{
+    width:72%;
+    min-height:54px;
+    font-size:21px;
+    border-width:2px;
+  }
+  .game-view .dice-help{font-size:10px}
+  .game-view details{font-size:10px}
+  .game-view .scorecard{padding:13px 8px;border-radius:20px}
+  .game-view .score-title h2{font-size:27px}
+}
+@media(max-width:390px){
+  .dice-tray{min-height:286px}
+  .game-view .dice-row{min-height:278px}
+  .game-view .dice-row .die{width:54px;height:54px;padding:8px}
+  .game-view .roll{width:76%;font-size:19px}
+}
