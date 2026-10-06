@@ -131,3 +131,33 @@ test('knock på fem energi förlorar matchen direkt',async()=>{
  assert.equal(r.winner,0);
  assert.equal(r.energy[1],0);
 });
+
+
+test('lägre poäng i omgången tappar energi i båda riktningar och lika ger ingen skada',async()=>{
+ const one=await pair();let r=one.room;
+ await db.query("update yatzy_private.rooms set dice='{2,2,2,2,2}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',one.a,r,{category:'chance'}); // 10
+ await db.query("update yatzy_private.rooms set dice='{4,4,4,4,4}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',one.b,r,{category:'chance'}); // 20
+ assert.deepEqual(r.energy,[40,50]);
+ assert.equal(r.last_damaged,0);
+ assert.equal(r.last_damage,10);
+
+ const two=await pair();r=two.room;
+ await db.query("update yatzy_private.rooms set dice='{5,5,5,5,5}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',two.a,r,{category:'chance'}); // 25
+ await db.query("update yatzy_private.rooms set dice='{3,3,3,3,3}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',two.b,r,{category:'chance'}); // 15
+ assert.deepEqual(r.energy,[50,40]);
+ assert.equal(r.last_damaged,1);
+ assert.equal(r.last_damage,10);
+
+ const three=await pair();r=three.room;
+ await db.query("update yatzy_private.rooms set dice='{4,4,4,4,4}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',three.a,r,{category:'chance'});
+ await db.query("update yatzy_private.rooms set dice='{4,4,4,4,4}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',three.b,r,{category:'chance'});
+ assert.deepEqual(r.energy,[50,50]);
+ assert.equal(r.last_damage,0);
+ assert.equal(r.last_damaged,null);
+});
