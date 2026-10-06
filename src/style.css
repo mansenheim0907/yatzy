@@ -2147,10 +2147,10 @@ main.roll-stage-main{
 @keyframes cube-tumble{
   0%{transform:rotateX(25deg) rotateY(-30deg) rotateZ(8deg)}
   35%{transform:rotateX(610deg) rotateY(-485deg) rotateZ(300deg)}
-  64%{transform:rotateX(940deg) rotateY(-740deg) rotateZ(470deg)}
-  77%{transform:rotateX(1080deg) rotateY(-900deg) rotateZ(535deg)}
-  88%{transform:rotateX(1072deg) rotateY(-894deg) rotateZ(542deg)}
-  100%{transform:rotateX(1080deg) rotateY(-900deg) rotateZ(540deg)}
+  64%{transform:rotateX(940deg) rotateY(-650deg) rotateZ(610deg)}
+  77%{transform:rotateX(1080deg) rotateY(-720deg) rotateZ(720deg)}
+  88%{transform:rotateX(1072deg) rotateY(-714deg) rotateZ(726deg)}
+  100%{transform:rotateX(1080deg) rotateY(-720deg) rotateZ(720deg)}
 }
 @keyframes throw-shadow{
   0%,38%{opacity:.05;transform:translate3d(-35px,20px,-60px) scale(.45)}
