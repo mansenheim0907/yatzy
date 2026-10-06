@@ -1621,3 +1621,124 @@ body:has(main > .game-view){
     width:48px;height:48px;flex-basis:48px;padding:7px;
   }
 }
+
+
+/* Brawl polish: more wear, depth and bar-fight detail */
+body:has(main > .game-view):before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:-1;
+  background:
+    repeating-linear-gradient(112deg,transparent 0 17px,rgba(255,255,255,.015) 18px,transparent 19px 43px),
+    radial-gradient(circle at 16% 22%,rgba(166,47,35,.14),transparent 25%),
+    radial-gradient(circle at 82% 18%,rgba(0,93,89,.11),transparent 27%),
+    linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.35));
+  mix-blend-mode:overlay;
+}
+.game-view .table{position:relative}
+.game-view .table:before,
+.game-view .scorecard:before{
+  content:"";
+  position:absolute;
+  inset:5px;
+  pointer-events:none;
+  opacity:.35;
+  background:
+    linear-gradient(103deg,transparent 0 28%,rgba(255,255,255,.06) 29%,transparent 30%),
+    repeating-linear-gradient(176deg,transparent 0 23px,rgba(135,96,67,.08) 24px,transparent 25px 51px);
+  mix-blend-mode:screen;
+}
+.duel-player-card:before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  opacity:.28;
+  background:
+    linear-gradient(135deg,transparent 0 44%,rgba(255,255,255,.08) 45%,transparent 46%),
+    repeating-linear-gradient(8deg,transparent 0 16px,rgba(152,116,78,.12) 17px,transparent 18px 37px);
+}
+.duel-player-card{position:relative;transform:rotate(-.35deg)}
+.duel-player-card:nth-child(2){transform:rotate(.35deg)}
+.duel-player-card.active{box-shadow:0 0 0 2px #ba2d27,0 0 18px #c12c2455,0 8px 22px #000b}
+.player-duel-cards:after{
+  font-size:30px!important;
+  color:#eee5d5!important;
+  -webkit-text-stroke:1px #1a0e0c;
+  text-shadow:3px 3px 0 #9f241f,-2px -2px 0 #171313!important;
+}
+.fighter-portrait{
+  border-right:1px solid #6f5d4b;
+  box-shadow:inset -15px 0 22px #000b,2px 0 0 #0a0a0a;
+}
+.dice-tray{
+  background:
+    linear-gradient(112deg,transparent 0 20%,rgba(255,255,255,.035) 21%,transparent 22%),
+    radial-gradient(circle at 20% 70%,rgba(136,55,30,.16),transparent 24%),
+    radial-gradient(circle at 78% 18%,rgba(0,0,0,.2),transparent 30%),
+    linear-gradient(180deg,#0f5148,#06332f);
+}
+.dice-tray:after{
+  content:"";
+  position:absolute;
+  inset:11px;
+  border:1px dashed rgba(190,154,105,.24);
+  border-radius:7px;
+  pointer-events:none;
+}
+.game-view .dice-row .die{
+  filter:saturate(.88) contrast(1.04);
+}
+.game-view .dice-row .die:nth-child(1){transform:translateY(2px) rotate(-4deg)}
+.game-view .dice-row .die:nth-child(2){transform:translateY(-2px) rotate(2deg)}
+.game-view .dice-row .die:nth-child(3){transform:translateY(3px) rotate(-1deg)}
+.game-view .dice-row .die:nth-child(4){transform:translateY(-1px) rotate(3deg)}
+.game-view .dice-row .die:nth-child(5){transform:translateY(2px) rotate(-3deg)}
+.game-view .roll{
+  position:relative;
+  overflow:hidden;
+}
+.game-view .roll:before{
+  content:"";
+  position:absolute;
+  left:4%;
+  right:4%;
+  top:9px;
+  height:1px;
+  background:rgba(255,215,190,.3);
+  transform:rotate(-.6deg);
+}
+.game-view .roll:after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(105deg,transparent 0 31%,rgba(255,255,255,.08) 32%,transparent 33%),
+    repeating-linear-gradient(175deg,transparent 0 11px,rgba(0,0,0,.09) 12px,transparent 13px 25px);
+}
+.game-view .scorecard{
+  position:relative;
+  transform:rotate(.08deg);
+}
+.game-view .scorecard:after{
+  content:"";
+  position:absolute;
+  inset:8px;
+  border:1px solid rgba(120,90,60,.24);
+  pointer-events:none;
+}
+.game-view .score-title{
+  border-bottom:2px solid #5d4638;
+  padding-bottom:8px;
+}
+.game-view .score-title h2{
+  text-shadow:2px 2px 0 #000;
+}
+.game-view tbody tr:hover{background:#25201d}
+.combat-notice{
+  box-shadow:inset 0 0 0 1px #160b09,0 4px 10px #0007;
+  transform:rotate(-.15deg);
+}
