@@ -69,18 +69,28 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
 function throwFace(value,face){
  return `<div class="throw-face ${face}">${Array.from({length:9},(_,i)=>`<i class="${dots[value].includes(i+1)?'pip':''}"></i>`).join('')}</div>`;
 }
-function throwDie(value,order){
+function throwDie(value,index){
  const side=n=>((value+n-2)%6)+1;
- const drift=(order-2)*24;
- return `<div class="throw-die" style="--throw-order:${order};--drift:${drift}px"><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span></div>`;
+ const rolling=Boolean(rollScene?.rolling&&rollScene.indices?.includes(index));
+ const order=Math.max(0,rollScene?.indices?.indexOf(index)??0);
+ const drift=(index-2)*22;
+ const held=Boolean(room?.held?.[index]);
+ return `<button type="button" class="throw-die ${rolling?'rolling':''} ${held?'held':''}" style="--throw-order:${order};--drift:${drift}px" data-scene-die="${index}" aria-label="Tärning ${index+1}: ${value}${held?', låst':''}" aria-pressed="${held}" ${rollScene?.rolling||busy?'disabled':''}><div class="throw-cube">${throwFace(value,'front')}${throwFace(side(2),'back')}${throwFace(side(3),'right')}${throwFace(side(4),'left')}${throwFace(side(5),'top')}${throwFace(side(6),'bottom')}</div><span class="throw-shadow" aria-hidden="true"></span><span class="throw-held-label">${held?'LÅST':''}</span></button>`;
 }
 function rollSceneView(){
- const values=rollScene?.values||[];
- return `<section class="roll-stage" aria-label="Tärningarna kastas"><div class="roll-table" aria-hidden="true"><div class="roll-dice">${values.map((n,i)=>throwDie(n,i)).join('')}</div></div></section>`;
+ const canReroll=room?.rolls<3&&!room?.held?.every(Boolean);
+ const rolling=Boolean(rollScene?.rolling);
+ return `<section class="roll-stage" aria-label="Tärningskast"><div class="roll-status"><strong>Kast ${room?.rolls||1} av 3</strong><span>${rolling?'Tärningarna rullar …':'Tryck på en tärning för att låsa den'}</span></div><div class="roll-table"><div class="roll-dice">${(room?.dice||[]).map((n,i)=>throwDie(n,i)).join('')}</div></div><div class="roll-scene-actions">${canReroll?`<button id="scene-roll" class="scene-roll" ${rolling||busy?'disabled':''}>Kasta igen <span>⚄</span></button>`:''}<button id="scene-score" class="scene-score" ${rolling||busy?'disabled':''}>Välj kategori →</button></div></section>`;
 }
 function render(){
  rememberInputs();rememberView();
- if(rollScene){root.innerHTML=`<main class="roll-stage-main">${rollSceneView()}</main>`;return;}
+ if(rollScene){
+  root.innerHTML=`<main class="roll-stage-main">${rollSceneView()}</main>`;
+  root.querySelectorAll('[data-scene-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.sceneDie)}));
+  bind('#scene-roll',()=>act('roll'));
+  bind('#scene-score',()=>{rollScene=null;render();});
+  return;
+ }
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
@@ -243,10 +253,12 @@ async function act(action,payload={}){
   if(action==='roll'){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
    rollingIndices=[];
-   rollScene={values:rerolled.map(i=>next.dice[i])};
+   rollScene={rolling:true,indices:rerolled};
    clearTimeout(rollAnimationTimer);
    apply(next);
-   rollAnimationTimer=setTimeout(()=>{rollScene=null;render();},2050);
+   rollAnimationTimer=setTimeout(()=>{
+    if(rollScene){rollScene={...rollScene,rolling:false};render();}
+   },3000);
   }else{
    apply(next);
   }
