@@ -831,3 +831,17 @@ body:has(main > .game-view) .message{
     font-size:7px;
   }
 }
+
+
+/* Duel energy / knockout */
+.game-view .energy-bars{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:2px 0 4px}
+.energy-player{padding:10px 12px;border:1px solid rgba(20,63,55,.18);border-radius:11px;background:rgba(255,255,255,.40)}
+.energy-label{display:flex;justify-content:space-between;gap:10px;font-size:10px;font-weight:700;margin-bottom:6px}
+.energy-label strong{font-size:11px}
+.energy-track{height:12px;border-radius:999px;background:#d9d0bc;overflow:hidden;box-shadow:inset 0 1px 3px #0003}
+.energy-track i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#3d8a58,#78a94f);transition:width .35s ease}
+.energy-player.danger .energy-track i{background:linear-gradient(90deg,#c97a2f,#d0a23b)}
+.energy-player.knocked .energy-track i{background:#9b3b31}
+.combat-notice{grid-column:1/-1;padding:9px 12px;border-radius:10px;background:#f4dfb6;border:1px solid #c99b58;color:#60431e;font-size:11px;font-weight:700;text-align:center}
+.combat-notice.knockout{background:#ead0c8;border-color:#ad5a49;color:#6b281e}
+@media(max-width:720px){.game-view .energy-bars{gap:6px}.energy-player{padding:7px}.energy-label{font-size:8px}.energy-label strong{font-size:9px}.energy-track{height:9px}.combat-notice{font-size:9px;padding:7px}}
