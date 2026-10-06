@@ -17,7 +17,7 @@ document.addEventListener('touchmove',e=>{
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
-let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},presenceUnsubscribe=()=>{},onlineCount=local?1:0,timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer,rollAnimationPending=false,rollSequence=0;
+let room=null,matches=[],matchesLoading=false,busy=false,message='',friends=false,inviteSent=false,codeRoom=false,started=false,subview=null,connection=local?'Lokal duell':'Ansluter …',unsubscribe=()=>{},presenceUnsubscribe=()=>{},onlineCount=local?1:0,timer,matchesTimer,refreshBusy=false,rollingIndices=[],rollAnimationTimer,rollAnimationPending=false,rollSequence=0,rollView=null;
 let diceLanding=[{x:-4,y:5,rz:-7,rx:-11,ry:7},{x:2,y:-4,rz:5,rx:-8,ry:-8},{x:-2,y:7,rz:-3,rx:-12,ry:4},{x:4,y:-6,rz:7,rx:-9,ry:-6},{x:-1,y:3,rz:-5,rx:-11,ry:8}];
 let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.avatar')??0)));
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
@@ -85,76 +85,90 @@ function singleDieCube(value){
  const side=n=>((value+n-2)%6)+1;
  return `<div class="single-die-roller" aria-hidden="true"><div class="single-die-shadow"></div><div class="single-die-cube"><div class="single-die-face front">${cubePips(value)}</div><div class="single-die-face back">${cubePips(side(2))}</div><div class="single-die-face right">${cubePips(side(3))}</div><div class="single-die-face left">${cubePips(side(4))}</div><div class="single-die-face top">${cubePips(side(5))}</div><div class="single-die-face bottom">${cubePips(side(6))}</div></div></div>`;
 }
+function rollViewMarkup(){
+ const value=room?.dice?.[rollView?.index??0]??1;
+ return `<main class="throw-view"><section class="throw-view-table" aria-label="Tärningskast"><div class="throw-view-light"></div><div class="throw-view-grain"></div><div class="throw-view-hint">KAST ${room?.rolls||1} AV 3</div><div class="throw-view-result"> ${value} </div></section></main>`;
+}
 function animateDiceRoll(){
- if(!rollAnimationPending||busy||!rollingIndices.length)return;
+ if(!rollAnimationPending||busy||!rollView)return;
  rollAnimationPending=false;
  const seq=rollSequence;
- const index=rollingIndices[0];
- const el=root.querySelector(`[data-die="${index}"]`);
- const tray=root.querySelector('.dice-tray');
- const p=diceLanding[index];
- if(!el||!tray||!p){rollingIndices=[];render();return;}
+ const table=root.querySelector('.throw-view-table');
+ if(!table)return;
+
+ const index=rollView.index;
+ const value=room?.dice?.[index]??1;
+ table.insertAdjacentHTML('beforeend',singleDieCube(value));
+ const roller=table.querySelector('.single-die-roller');
+ const cube=roller?.querySelector('.single-die-cube');
+ const shadow=roller?.querySelector('.single-die-shadow');
+ if(!roller||!cube||!shadow){rollView=null;rollingIndices=[];render();return;}
 
  if(matchMedia('(prefers-reduced-motion: reduce)').matches){
-  rollingIndices=[];
-  render();
+  roller.style.transform='translate3d(-50%,-50%,0)';
+  setTimeout(()=>{if(seq===rollSequence){rollView=null;rollingIndices=[];render();}},700);
   return;
  }
 
- el.style.visibility='hidden';
- tray.insertAdjacentHTML('beforeend',singleDieCube(room.dice[index]));
- const roller=tray.querySelector('.single-die-roller');
- const cube=roller.querySelector('.single-die-cube');
- const shadow=roller.querySelector('.single-die-shadow');
-
- const direction=Math.random()<.5?-1:1;
- const startX=direction<0?-tray.clientWidth*.42:tray.clientWidth*.42;
- const finishX=(Math.random()-.5)*tray.clientWidth*.22;
- const finishY=(Math.random()-.5)*tray.clientHeight*.14;
- const spinX=direction*(720+Math.random()*360);
- const spinY=-direction*(540+Math.random()*360);
- const spinZ=(Math.random()-.5)*240;
- const duration=1750+Math.random()*280;
+ const width=table.clientWidth;
+ const height=table.clientHeight;
+ const fromLeft=Math.random()<.5;
+ const startX=(fromLeft?-1:1)*(width*.46);
+ const targetX=(Math.random()-.5)*width*.24;
+ const targetY=height*.05+(Math.random()-.5)*height*.08;
+ const side=Math.random()<.5?-1:1;
+ const spinX=side*(540+Math.random()*180);
+ const spinY=-side*(460+Math.random()*200);
+ const spinZ=(Math.random()-.5)*150;
+ const duration=2050+Math.random()*220;
 
  const travel=roller.animate([
-  {offset:0,transform:`translate3d(calc(-50% + ${startX}px),calc(-50% - 36px),80px)`},
-  {offset:.42,transform:`translate3d(calc(-50% + ${finishX-18}px),calc(-50% + ${finishY-18}px),30px)`},
-  {offset:.60,transform:`translate3d(calc(-50% + ${finishX+8}px),calc(-50% + ${finishY+3}px),0)`},
-  {offset:.73,transform:`translate3d(calc(-50% + ${finishX-5}px),calc(-50% + ${finishY-9}px),13px)`},
-  {offset:.86,transform:`translate3d(calc(-50% + ${finishX+2}px),calc(-50% + ${finishY+1}px),0)`},
-  {offset:.94,transform:`translate3d(calc(-50% + ${finishX}px),calc(-50% + ${finishY-3}px),5px)`},
-  {offset:1,transform:`translate3d(calc(-50% + ${finishX}px),calc(-50% + ${finishY}px),0)`}
- ],{duration,easing:'cubic-bezier(.17,.68,.2,1)',fill:'forwards'});
+  {offset:0,transform:`translate3d(calc(-50% + ${startX}px),calc(-50% - 28px),46px)`},
+  {offset:.34,transform:`translate3d(calc(-50% + ${targetX-22}px),calc(-50% + ${targetY-12}px),18px)`},
+  {offset:.52,transform:`translate3d(calc(-50% + ${targetX+7}px),calc(-50% + ${targetY+2}px),0)`},
+  {offset:.66,transform:`translate3d(calc(-50% + ${targetX-5}px),calc(-50% + ${targetY-7}px),10px)`},
+  {offset:.79,transform:`translate3d(calc(-50% + ${targetX+2}px),calc(-50% + ${targetY+1}px),0)`},
+  {offset:.90,transform:`translate3d(calc(-50% + ${targetX-1}px),calc(-50% + ${targetY-2}px),4px)`},
+  {offset:1,transform:`translate3d(calc(-50% + ${targetX}px),calc(-50% + ${targetY}px),0)`}
+ ],{duration,easing:'cubic-bezier(.19,.66,.2,1)',fill:'forwards'});
 
  const tumble=cube.animate([
   {offset:0,transform:'rotateX(0deg) rotateY(0deg) rotateZ(0deg)'},
-  {offset:.42,transform:`rotateX(${spinX*.48}deg) rotateY(${spinY*.48}deg) rotateZ(${spinZ*.48}deg)`},
-  {offset:.60,transform:`rotateX(${spinX*.69}deg) rotateY(${spinY*.69}deg) rotateZ(${spinZ*.69}deg)`},
-  {offset:.73,transform:`rotateX(${spinX*.83}deg) rotateY(${spinY*.83}deg) rotateZ(${spinZ*.83}deg)`},
-  {offset:.86,transform:`rotateX(${spinX*.94}deg) rotateY(${spinY*.94}deg) rotateZ(${spinZ*.94}deg)`},
-  {offset:.94,transform:'rotateX(718deg) rotateY(-719deg) rotateZ(359deg)'},
+  {offset:.34,transform:`rotateX(${spinX*.42}deg) rotateY(${spinY*.42}deg) rotateZ(${spinZ*.42}deg)`},
+  {offset:.52,transform:`rotateX(${spinX*.66}deg) rotateY(${spinY*.66}deg) rotateZ(${spinZ*.66}deg)`},
+  {offset:.66,transform:`rotateX(${spinX*.80}deg) rotateY(${spinY*.80}deg) rotateZ(${spinZ*.80}deg)`},
+  {offset:.79,transform:`rotateX(${spinX*.92}deg) rotateY(${spinY*.92}deg) rotateZ(${spinZ*.92}deg)`},
+  {offset:.90,transform:'rotateX(716deg) rotateY(-717deg) rotateZ(356deg)'},
   {offset:1,transform:'rotateX(720deg) rotateY(-720deg) rotateZ(360deg)'}
- ],{duration,easing:'cubic-bezier(.18,.65,.22,1)',fill:'forwards'});
+ ],{duration,easing:'cubic-bezier(.17,.62,.22,1)',fill:'forwards'});
 
  shadow.animate([
-  {offset:0,opacity:.08,transform:'translate(-50%,-50%) scale(.5)'},
-  {offset:.60,opacity:.34,transform:'translate(-50%,-50%) scale(1.08)'},
-  {offset:.73,opacity:.18,transform:'translate(-50%,-50%) scale(.78)'},
-  {offset:1,opacity:.34,transform:'translate(-50%,-50%) scale(1)'}
+  {offset:0,opacity:.08,transform:'translate(-50%,-50%) scale(.58)'},
+  {offset:.52,opacity:.38,transform:'translate(-50%,-50%) scale(1.05)'},
+  {offset:.66,opacity:.20,transform:'translate(-50%,-50%) scale(.80)'},
+  {offset:.79,opacity:.36,transform:'translate(-50%,-50%) scale(1.02)'},
+  {offset:1,opacity:.40,transform:'translate(-50%,-50%) scale(1)'}
  ],{duration,easing:'ease-out',fill:'forwards'});
 
  Promise.all([travel.finished.catch(()=>{}),tumble.finished.catch(()=>{})]).then(()=>{
   if(seq!==rollSequence)return;
-  roller.remove();
-  el.style.visibility='';
-  rollingIndices=[];
   clearTimeout(rollAnimationTimer);
-  render();
+  rollAnimationTimer=setTimeout(()=>{
+   if(seq!==rollSequence)return;
+   rollView=null;
+   rollingIndices=[];
+   render();
+  },850);
  });
 }
 
 function render(){
  rememberInputs();rememberView();
+ if(rollView){
+  root.innerHTML=rollViewMarkup();
+  if(rollAnimationPending&&!busy)queueMicrotask(animateDiceRoll);
+  return;
+ }
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
@@ -181,7 +195,6 @@ function render(){
  root.querySelectorAll('[data-avatar]').forEach(el=>el.onclick=()=>{selectedAvatar=Number(el.dataset.avatar);localStorage.setItem('yatzy.avatar',String(selectedAvatar));render();});
  root.querySelectorAll('[data-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.die)}));
  root.querySelectorAll('[data-score]').forEach(el=>el.onclick=()=>{const category=el.dataset.score,points=score(category,room.dice);if(points!==0||confirm('Stryk kategorin och få 0 poäng?'))act('score',{category});});
- if(rollAnimationPending&&!busy)queueMicrotask(animateDiceRoll);
 }
 function bind(selector,fn){const el=root.querySelector(selector);if(el)el.onclick=fn;}
 function home(){return started?(playerName()?lobby():nameStep()):splash();}
@@ -319,18 +332,19 @@ async function act(action,payload={}){
    rerolled.forEach(i=>{diceLanding[i]=randomLanding(i);});
    rollingIndices=rerolled.length?[rerolled[0]]:[];
    rollSequence+=1;
-   rollAnimationPending=rollingIndices.length>0;
+   rollView=rollingIndices.length?{index:rollingIndices[0]}:null;
+   rollAnimationPending=Boolean(rollView);
    clearTimeout(rollAnimationTimer);
    apply(next);
    rollAnimationTimer=setTimeout(()=>{
-    if(rollingIndices.length){rollingIndices=[];render();}
-   },2400);
+    if(rollView){rollView=null;rollingIndices=[];render();}
+   },3600);
   }else{
    apply(next);
   }
   if(action==='leave'){cleanup();room=null;codeRoom=false;localStorage.removeItem('yatzy.room');await refreshMatches();}
  }
- catch(e){rollingIndices=[];rollAnimationPending=false;message=e.message;await refresh();}finally{busy=false;render();}
+ catch(e){rollingIndices=[];rollAnimationPending=false;rollView=null;message=e.message;await refresh();}finally{busy=false;render();}
 }
 async function refresh(){
  if(!room||refreshBusy)return;const id=room.id;refreshBusy=true;
