@@ -469,8 +469,9 @@ body:has(main > .game-view) .message{
     0 7px 0 #c8c3b7,
     0 12px 18px #0005;
   transform-style:preserve-3d;
-  transform:rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz));
-  transition:transform .18s ease,box-shadow .18s ease,background .18s ease;
+  transform:translate3d(var(--tx,0),var(--ty,0),0) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz));
+  transition:transform .24s cubic-bezier(.2,.75,.25,1),box-shadow .2s ease,background .18s ease;
+  will-change:transform;
 }
 .game-view .dice-row .die:nth-child(2){--rx:-7deg;--ry:-9deg;--rz:2deg}
 .game-view .dice-row .die:nth-child(3){--rx:-11deg;--ry:5deg;--rz:1deg}
@@ -496,26 +497,29 @@ body:has(main > .game-view) .message{
 }
 .game-view .dice-row .die.held .pip{background:#fffefa}
 .game-view .dice-row .die.rolling{
-  animation:die-roll-in .9s cubic-bezier(.18,.82,.28,1.05) both;
-  animation-delay:calc(var(--roll-order) * 140ms);
+  animation:die-roll-in 1.15s cubic-bezier(.16,.84,.24,1) both;
+  animation-delay:calc(var(--roll-order) * 95ms);
   pointer-events:none;
 }
 @keyframes die-roll-in{
   0%{
-    opacity:0;
-    transform:translate3d(-120px,-90px,130px) rotateX(500deg) rotateY(-430deg) rotateZ(180deg) scale(.72);
-    box-shadow:0 30px 38px #0002;
+    opacity:.15;
+    transform:translate3d(calc(var(--throw-x,0px) - 92px),-76px,120px) rotateX(560deg) rotateY(-470deg) rotateZ(190deg) scale(.74);
+    box-shadow:0 34px 42px #0002;
   }
-  58%{
+  52%{
     opacity:1;
-    transform:translate3d(12px,-18px,20px) rotateX(110deg) rotateY(-70deg) rotateZ(35deg) scale(1.05);
+    transform:translate3d(calc(var(--tx,0px) + 10px),calc(var(--ty,0px) - 16px),18px) rotateX(145deg) rotateY(-86deg) rotateZ(42deg) scale(1.04);
   }
-  78%{
-    transform:translate3d(-4px,4px,0) rotateX(18deg) rotateY(14deg) rotateZ(-5deg) scale(.98);
+  72%{
+    transform:translate3d(calc(var(--tx,0px) - 3px),calc(var(--ty,0px) + 3px),2px) rotateX(24deg) rotateY(16deg) rotateZ(calc(var(--rz) - 5deg)) scale(.985);
+  }
+  86%{
+    transform:translate3d(calc(var(--tx,0px) + 1px),calc(var(--ty,0px) - 1px),0) rotateX(calc(var(--rx) - 2deg)) rotateY(calc(var(--ry) + 2deg)) rotateZ(calc(var(--rz) + 2deg)) scale(1.008);
   }
   100%{
     opacity:1;
-    transform:rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(1);
+    transform:translate3d(var(--tx,0px),var(--ty,0px),0) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(1);
   }
 }
 @media(prefers-reduced-motion:reduce){
