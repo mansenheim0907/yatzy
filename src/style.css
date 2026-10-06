@@ -1742,3 +1742,108 @@ body:has(main > .game-view):before{
   box-shadow:inset 0 0 0 1px #160b09,0 4px 10px #0007;
   transform:rotate(-.15deg);
 }
+
+
+/* Profile picker */
+.name-step{max-width:760px}
+.avatar-picker{
+  margin:20px 0 6px;
+  padding:16px;
+  border:2px solid #6a4a34;
+  border-radius:12px;
+  background:linear-gradient(180deg,#181a19,#0c0e0e);
+  box-shadow:inset 0 0 0 1px #3f342c,0 8px 18px #0005;
+  color:#eee5d4;
+}
+.avatar-picker h3{
+  margin:0;
+  text-align:center;
+  font:900 24px Impact,'Arial Black',sans-serif;
+  text-transform:uppercase;
+  letter-spacing:1px;
+}
+.avatar-picker>p{margin:4px 0 14px;text-align:center;color:#aaa398;font-size:11px}
+.avatar-group+ .avatar-group{margin-top:14px}
+.avatar-group>span{
+  display:block;
+  margin:0 0 7px;
+  color:#d9c9b3;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+}
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.avatar-choice{
+  position:relative;
+  padding:0;
+  aspect-ratio:1;
+  overflow:hidden;
+  border:2px solid #53483d;
+  border-radius:9px;
+  background:#101211;
+  box-shadow:0 3px 7px #0007;
+}
+.avatar-choice svg{display:block;width:100%;height:100%}
+.avatar-choice.selected{
+  border-color:#d13a31;
+  box-shadow:0 0 0 2px #f0c36a,0 0 16px #d6372c88;
+  transform:translateY(-2px) rotate(-1deg);
+}
+.avatar-choice.selected:after{
+  content:"✓";
+  position:absolute;
+  right:4px;bottom:4px;
+  width:22px;height:22px;
+  display:grid;place-items:center;
+  border-radius:50%;
+  background:#bd3129;
+  color:#fff3dc;
+  font-weight:900;
+  box-shadow:0 2px 5px #0008;
+}
+.fighter-portrait{
+  min-width:92px;
+  overflow:hidden;
+  background:#111;
+  border-right:1px solid #6f5d4b;
+  box-shadow:inset -15px 0 22px #000b,2px 0 0 #0a0a0a;
+}
+.fighter-portrait svg{display:block;width:100%;height:100%;object-fit:cover}
+@media(max-width:650px){
+  .name-step{max-width:94vw}
+  .avatar-picker{padding:12px 9px}
+  .avatar-picker h3{font-size:20px}
+  .avatar-grid{gap:5px}
+  .avatar-choice{border-radius:7px}
+}
+
+/* More physical dice throw */
+.game-view .dice-row .die.rolling{
+  animation:real-die-throw 1.18s cubic-bezier(.14,.78,.22,1) both;
+  animation-delay:calc(var(--roll-order) * 80ms);
+}
+@keyframes real-die-throw{
+  0%{
+    transform:translate3d(calc(var(--throw-x,0px) - 34px),-42px,80px) rotateX(680deg) rotateY(-590deg) rotateZ(260deg) scale(.86);
+    filter:blur(1.4px);
+  }
+  38%{
+    transform:translate3d(calc(var(--tx,0px) + 14px),calc(var(--ty,0px) - 10px),25px) rotateX(330deg) rotateY(-250deg) rotateZ(125deg) scale(1.04);
+    filter:blur(.7px);
+  }
+  62%{
+    transform:translate3d(calc(var(--tx,0px) - 7px),calc(var(--ty,0px) + 5px),5px) rotateX(72deg) rotateY(41deg) rotateZ(calc(var(--rz) - 12deg)) scale(.97);
+    filter:none;
+  }
+  79%{
+    transform:translate3d(calc(var(--tx,0px) + 3px),calc(var(--ty,0px) - 3px),9px) rotateX(calc(var(--rx) + 18deg)) rotateY(calc(var(--ry) - 11deg)) rotateZ(calc(var(--rz) + 7deg)) scale(1.02);
+  }
+  90%{
+    transform:translate3d(calc(var(--tx,0px) - 1px),calc(var(--ty,0px) + 1px),1px) rotateX(calc(var(--rx) - 4deg)) rotateY(calc(var(--ry) + 3deg)) rotateZ(calc(var(--rz) - 2deg)) scale(.995);
+  }
+  100%{
+    transform:translate3d(var(--tx,0px),var(--ty,0px),0) rotateX(var(--rx)) rotateY(var(--ry)) rotateZ(var(--rz)) scale(1);
+    filter:none;
+  }
+}
