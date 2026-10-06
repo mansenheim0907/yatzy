@@ -1955,3 +1955,19 @@ body:has(main > .game-view):before{
     margin-bottom:14px;
   }
 }
+
+
+/* App-like page scrolling: no browser overscroll / pull-to-refresh */
+html,body{
+  overscroll-behavior-y:none;
+}
+body{
+  overscroll-behavior:none;
+}
+
+/* Avatar sprite is 4 columns × 5 rows. */
+.avatar-art,
+.fighter-portrait .avatar-art,
+.tavern-menu > .lobby-profile .avatar-art{
+  background-size:400% 500%;
+}
