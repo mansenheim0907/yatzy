@@ -88,3 +88,46 @@ test('oavgjort, uppgiven match och utgånget rum',async()=>{
  await db.query("update yatzy_private.rooms set touched=clock_timestamp()-interval '25 hours' where id=$1",[old.id]);
  await assert.rejects(call('join',token(),null,{code:old.code,name:'Late'}),/hittades inte/);
 });
+
+
+test('energi tar poängskillnaden efter en komplett omgång',async()=>{
+ const {a,b,room}=await pair();let r=room;
+ await db.query("update yatzy_private.rooms set dice='{6,6,6,6,6}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',a,r,{category:'chance'});
+ assert.deepEqual(r.energy,[50,50]);
+ await db.query("update yatzy_private.rooms set dice='{1,1,1,1,1}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',b,r,{category:'chance'});
+ assert.deepEqual(r.energy,[50,25]);
+ assert.equal(r.last_damage,25);
+ assert.equal(r.last_damaged,1);
+});
+
+test('knock återställer 45 och spelaren står över ett slag',async()=>{
+ const {a,b,room}=await pair();let r=room;
+ await db.query("update yatzy_private.rooms set energy='{50,5}',energy_max='{50,50}',dice='{6,6,6,6,6}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',a,r,{category:'chance'});
+ await db.query("update yatzy_private.rooms set dice='{1,1,1,1,1}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',b,r,{category:'chance'});
+ assert.equal(r.energy[1],0);
+ assert.equal(r.energy_max[1],45);
+ assert.equal(r.knocked[1],true);
+ assert.equal(r.turn,0);
+ await db.query("update yatzy_private.rooms set dice='{2,2,3,4,5}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',a,r,{category:'ones'});
+ assert.equal(r.last_skip,1);
+ assert.equal(r.energy[1],45);
+ assert.equal(r.energy_max[1],45);
+ assert.equal(r.knocked[1],false);
+ assert.equal(r.turn,0);
+});
+
+test('knock på fem energi förlorar matchen direkt',async()=>{
+ const {a,b,room}=await pair();let r=room;
+ await db.query("update yatzy_private.rooms set energy='{50,5}',energy_max='{50,5}',dice='{6,6,6,6,6}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',a,r,{category:'chance'});
+ await db.query("update yatzy_private.rooms set dice='{1,1,1,1,1}',rolls=1 where id=$1",[r.id]);
+ r=await call('score',b,r,{category:'chance'});
+ assert.equal(r.status,'knockout');
+ assert.equal(r.winner,0);
+ assert.equal(r.energy[1],0);
+});
