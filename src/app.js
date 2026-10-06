@@ -59,6 +59,7 @@ function render(){
  root.querySelector('#join-form')?.addEventListener('submit',e=>{e.preventDefault();enter('join');});
  bind('#roll',()=>act('roll'));bind('#leave',()=>{if(room.status==='waiting'||confirm('Lämna duellen? Om matchen har börjat vinner motståndaren.'))act('leave');});
  bind('#home',()=>closeRoom());
+ bind('#restart-match',()=>restartFromScratch());
  root.querySelectorAll('[data-match]').forEach(el=>el.onclick=()=>openMatch(el.dataset.match));
  root.querySelectorAll('[data-avatar]').forEach(el=>el.onclick=()=>{selectedAvatar=Number(el.dataset.avatar);localStorage.setItem('yatzy.avatar',String(selectedAvatar));render();});
  root.querySelectorAll('[data-die]').forEach(el=>el.onclick=()=>act('hold',{index:Number(el.dataset.die)}));
@@ -119,7 +120,7 @@ function game(myTurn){
  const heading=done?(room.winner===null?'Oavgjort!':room.winner===room.seat?'Du vann duellen!':`${esc(room.names[room.winner])} vann!`):myTurn?'Din tur att chansa.':`${esc(room.names[room.turn])} kastar.`;
  const upper=categories.slice(0,6),lower=categories.slice(6);
  const doneText=room.status==='knockout'?'Matchen avgjordes på knockout.':room.status==='abandoned'?'Duellen avslutades när en spelare lämnade.':room.status==='timeout'?'Matchen avslutades efter en timme utan nytt drag. Motståndaren vann på tidsgräns.':'Alla kast är gjorda. Tack för en god match!';
- return `<section class="game-view"><div class="duel-logo"><strong>YATZY</strong><span>DUELL</span><i>⚄ ⚂</i></div><section class="game-heading"><div><p class="eyebrow">DUELL / ${room.code}</p><h1>${heading}</h1><p>${done?doneText:myTurn?'Kasta tärningarna och välj var poängen gör mest nytta.':'Följ kasten live. Snart är det din tur.'}</p></div>${done?'<button id="home" class="secondary">Till dina matcher ↗</button>':`<div class="game-actions"><button id="back-matches" class="text-button">Dina matcher</button><button id="leave" class="text-button" ${busy?'disabled':''}>Lämna match</button></div>`}</section><div class="game-grid"><section class="table card"><div class="table-top"><span>${done?'SLUTRESULTAT':myTurn?'DITT KAST':'MOTSTÅNDARENS KAST'}</span><span>${room.rolls} / 3 KAST</span></div><div class="player-duel-cards">${room.names.map((name,i)=>`<div class="duel-player-card ${i===room.turn&&!done?'active':''} ${i===room.seat?'me':''}"><div class="fighter-portrait" aria-hidden="true">${avatarSvg(roomAvatar(i))}</div><div class="duel-player-content"><div class="duel-player-top"><span>${i===room.seat?'♛ ':''}${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong></div>${energyBar(i)}</div></div>`).join('')}</div>${combatNotice()}<div class="dice-tray"><div class="dice-row">${room.dice.map((n,i)=>die(n,room.held[i],i,!myTurn||busy||room.rolls===0||room.rolls===3,rollingIndices.indexOf(i))).join('')}</div></div><p class="dice-help">${done?'Sugen på revansch? Starta en ny duell.':room.rolls===0?'Dags att låta tärningarna tala.':'Tryck på en tärning för att låsa eller låsa upp den.'}</p><button id="roll" class="primary roll" ${!myTurn||busy||room.rolls>=3||room.held.every(Boolean)?'disabled':''}>${room.rolls===0?'Kasta tärningarna':room.rolls===3?'Välj en kategori →':'Kasta igen'} <span>⚄</span></button><div class="score-summary compact-summary">${room.names.map((name,i)=>`<div class="${i===room.turn&&!done?'active':''}"><span>${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong><small>${Object.keys(room.cards[i]).length} av 15 kategorier</small></div>`).join('')}</div></section><section class="scorecard card"><div class="score-title"><h2>Protokollet</h2><span>15 KATEGORIER</span></div><div class="score-columns"><table>${scoreTableHead(other)}<tbody>${scoreRows(upper,mine,other,myTurn)}<tr class="bonus"><th>Summa övre</th><td>${totals(mine).upper}</td><td>${totals(room.cards[other]).upper}</td></tr><tr class="bonus"><th>Bonus <small>63 → +50</small></th><td>${totals(mine).bonus}</td><td>${totals(room.cards[other]).bonus}</td></tr></tbody></table><table>${scoreTableHead(other)}<tbody>${scoreRows(lower,mine,other,myTurn)}</tbody><tfoot><tr><th>Totalt</th><td>${totals(mine).total}</td><td>${totals(room.cards[other]).total}</td></tr></tfoot></table></div></section></div></section>`;
+ return `<section class="game-view"><div class="game-utility-bar"><button id="restart-match" class="restart-match" ${busy?'disabled':''}>${done?'Börja om':'Avsluta & börja om'}</button></div><div class="duel-logo"><strong>YATZY</strong><span>DUELL</span><i>⚄ ⚂</i></div><section class="game-heading"><div><p class="eyebrow">DUELL / ${room.code}</p><h1>${heading}</h1><p>${done?doneText:myTurn?'Kasta tärningarna och välj var poängen gör mest nytta.':'Följ kasten live. Snart är det din tur.'}</p></div>${done?'<button id="home" class="secondary">Till dina matcher ↗</button>':`<div class="game-actions"><button id="back-matches" class="text-button">Dina matcher</button><button id="leave" class="text-button" ${busy?'disabled':''}>Lämna match</button></div>`}</section><div class="game-grid"><section class="table card"><div class="table-top"><span>${done?'SLUTRESULTAT':myTurn?'DITT KAST':'MOTSTÅNDARENS KAST'}</span><span>${room.rolls} / 3 KAST</span></div><div class="player-duel-cards">${room.names.map((name,i)=>`<div class="duel-player-card ${i===room.turn&&!done?'active':''} ${i===room.seat?'me':''}"><div class="fighter-portrait" aria-hidden="true">${avatarSvg(roomAvatar(i))}</div><div class="duel-player-content"><div class="duel-player-top"><span>${i===room.seat?'♛ ':''}${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong></div>${energyBar(i)}</div></div>`).join('')}</div>${combatNotice()}<div class="dice-tray"><div class="dice-row">${room.dice.map((n,i)=>die(n,room.held[i],i,!myTurn||busy||room.rolls===0||room.rolls===3,rollingIndices.indexOf(i))).join('')}</div></div><p class="dice-help">${done?'Sugen på revansch? Starta en ny duell.':room.rolls===0?'Dags att låta tärningarna tala.':'Tryck på en tärning för att låsa eller låsa upp den.'}</p><button id="roll" class="primary roll" ${!myTurn||busy||room.rolls>=3||room.held.every(Boolean)?'disabled':''}>${room.rolls===0?'Kasta tärningarna':room.rolls===3?'Välj en kategori →':'Kasta igen'} <span>⚄</span></button><div class="score-summary compact-summary">${room.names.map((name,i)=>`<div class="${i===room.turn&&!done?'active':''}"><span>${esc(name)}${i===room.seat?' (du)':''}</span><strong>${totals(room.cards[i]).total}<small> poäng</small></strong><small>${Object.keys(room.cards[i]).length} av 15 kategorier</small></div>`).join('')}</div></section><section class="scorecard card"><div class="score-title"><h2>Protokollet</h2><span>15 KATEGORIER</span></div><div class="score-columns"><table>${scoreTableHead(other)}<tbody>${scoreRows(upper,mine,other,myTurn)}<tr class="bonus"><th>Summa övre</th><td>${totals(mine).upper}</td><td>${totals(room.cards[other]).upper}</td></tr><tr class="bonus"><th>Bonus <small>63 → +50</small></th><td>${totals(mine).bonus}</td><td>${totals(room.cards[other]).bonus}</td></tr></tbody></table><table>${scoreTableHead(other)}<tbody>${scoreRows(lower,mine,other,myTurn)}</tbody><tfoot><tr><th>Totalt</th><td>${totals(mine).total}</td><td>${totals(room.cards[other]).total}</td></tr></tfoot></table></div></section></div></section>`;
 }
 function apply(next){
  if(room&&next.id===room.id&&next.version<room.version)return;
@@ -231,6 +232,28 @@ async function openMatch(id){
   await watch();
  }catch(e){message=e.message;room=null;await refreshMatches();}
  finally{busy=false;render();}
+}
+async function restartFromScratch(){
+ if(busy)return;
+ if(room?.status==='playing'&&!confirm('Avsluta matchen helt och börja om? Motståndaren vinner den pågående matchen.'))return;
+ busy=true;message='';render();
+ try{
+  if(room&&['waiting','playing'].includes(room.status)){
+   await command('leave',token,room.id,{version:room.version});
+  }
+ }catch(e){
+  console.warn('Kunde inte lämna matchen på servern:',e);
+ }
+ cleanup();
+ room=null;matches=[];codeRoom=false;inviteSent=false;friends=false;subview=null;rollingIndices=[];
+ localStorage.removeItem('yatzy.room');
+ localStorage.removeItem('yatzy.avatar');
+ sessionStorage.removeItem('yatzy.name');
+ selectedAvatar=0;
+ started=true;
+ history.replaceState({},'',import.meta.env.BASE_URL);
+ busy=false;
+ render();
 }
 async function closeRoom(){
  cleanup();room=null;codeRoom=false;inviteSent=false;rollingIndices=[];localStorage.removeItem('yatzy.room');message='';
