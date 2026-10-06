@@ -2,6 +2,21 @@ import './style.css';
 import {categories,score,totals} from './rules.js';
 import {configured,local,identity,command,subscribe} from './api.js';
 const root=document.querySelector('#app');
+
+/* Prevent iOS/Safari pull-to-refresh while preserving normal in-app scrolling. */
+let touchStartY=0;
+document.addEventListener('touchstart',e=>{touchStartY=e.touches[0]?.clientY??0;},{passive:true});
+document.addEventListener('touchmove',e=>{
+ const y=e.touches[0]?.clientY??touchStartY;
+ if(y<=touchStartY)return;
+ let el=e.target instanceof Element?e.target:null;
+ while(el&&el!==document.body){
+  const style=getComputedStyle(el);
+  if(/(auto|scroll)/.test(style.overflowY)&&el.scrollHeight>el.clientHeight&&el.scrollTop>0)return;
+  el=el.parentElement;
+ }
+ if((document.scrollingElement?.scrollTop??window.scrollY)<=0)e.preventDefault();
+},{passive:false});
 const inviteParam=new URLSearchParams(location.search).get('room');
 const inviteCode=/^[A-Za-z0-9]{5}$/.test(inviteParam||'')?inviteParam.toUpperCase():'';
 const playerName=()=>sessionStorage.getItem('yatzy.name')||'';
