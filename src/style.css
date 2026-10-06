@@ -1880,7 +1880,7 @@ body:has(main > .game-view):before{
 }
 
 
-/* Approved photographic/comic avatar set */
+/* Profile gallery */
 .avatar-picker>p,.avatar-group{display:none!important}
 .avatar-grid.mixed{
   display:grid;
@@ -1896,29 +1896,8 @@ body:has(main > .game-view):before{
   border-radius:10px;
   background:#111;
 }
-.avatar-art{
-  display:block;
-  width:100%;
-  height:100%;
-  background-image:url('/yatzy-avatar-sprite-v2.webp');
-  background-size:500% 400%;
-  background-position:var(--avatar-x) var(--avatar-y);
-  background-repeat:no-repeat;
-}
-.avatar-choice .avatar-art{
-  transition:transform .16s ease,filter .16s ease;
-}
-.avatar-choice:hover .avatar-art{transform:scale(1.035)}
-.avatar-choice.selected .avatar-art{filter:saturate(1.08) contrast(1.05)}
-.fighter-portrait .avatar-art{
-  width:100%;
-  height:100%;
-  min-height:118px;
-  background-size:500% 400%;
-}
 @media(max-width:650px){
   .avatar-grid.mixed{grid-template-columns:repeat(4,1fr);gap:6px}
-  .fighter-portrait .avatar-art{min-height:90px}
 }
 
 
@@ -1939,14 +1918,6 @@ body:has(main > .game-view):before{
   position:relative;
   z-index:4;
 }
-.tavern-menu > .lobby-profile .avatar-art{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  background-size:500% 400%;
-  background-repeat:no-repeat;
-  box-shadow:inset 0 0 0 2px rgba(13,64,51,.55);
-}
 @media(max-width:650px){
   .tavern-menu > .lobby-profile{
     width:104px;
@@ -1965,12 +1936,6 @@ body{
   overscroll-behavior:none;
 }
 
-/* Avatar sprite is 5 columns × 4 rows. Keep the final override in sync with avatarStyle(). */
-.avatar-art,
-.fighter-portrait .avatar-art,
-.tavern-menu > .lobby-profile .avatar-art{
-  background-size:500% 400%;
-}
 
 
 /* Hard stop for browser rubber-band refresh without disabling page scrolling. */
@@ -1988,7 +1953,7 @@ body{
 }
 
 
-/* Profile selector v3: inline vector portraits, no sprite dependency. */
+/* Tavern profile selector */
 .avatar-picker{
   margin:18px 0 8px!important;
   padding:14px 14px 16px!important;
@@ -2016,29 +1981,13 @@ body{
   border-radius:13px!important;
   box-shadow:0 3px 7px #5c3b2338!important;
 }
-.avatar-choice .avatar-svg{
-  display:block;
-  width:100%;
-  height:100%;
-  transition:transform .16s ease,filter .16s ease;
-}
-.avatar-choice:hover .avatar-svg{transform:scale(1.035)}
 .avatar-choice.selected{
   border-color:#d5643d!important;
   box-shadow:0 0 0 3px #f0b968,0 5px 12px #7a351d55!important;
 }
-.avatar-choice.selected .avatar-svg{filter:saturate(1.08) contrast(1.03)}
-.fighter-portrait .avatar-svg,
-.tavern-menu > .lobby-profile .avatar-svg{
-  width:100%;
-  height:100%;
-  display:block;
-  object-fit:cover;
-}
 .tavern-menu > .lobby-profile{
   background:#f2dfbd!important;
 }
-.avatar-art{display:none!important}
 @media(max-width:650px){
   .avatar-picker{padding:12px 10px 14px!important}
   .avatar-grid.mixed{gap:7px!important}
@@ -2046,31 +1995,20 @@ body{
 }
 
 
-/* Avatar portraits v4: generated portrait set */
-.avatar-art{
-  display:block!important;
-  width:100%!important;
-  height:100%!important;
-  background-size:500% 400%!important;
-  background-position:var(--avatar-x) var(--avatar-y)!important;
-  background-repeat:no-repeat!important;
-  background-color:#111!important;
+/* Each portrait is a separate generated image, shared by picker/lobby/match. */
+.fighter-portrait{min-width:0}
+.avatar-portrait{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:center;
 }
-.avatar-choice .avatar-art{
+.avatar-choice .avatar-portrait{
   transition:transform .16s ease,filter .16s ease;
 }
-.avatar-choice:hover .avatar-art{transform:scale(1.035)}
-.avatar-choice.selected .avatar-art{filter:saturate(1.08) contrast(1.04)}
-.fighter-portrait .avatar-art{
-  min-height:118px;
-  background-size:500% 400%!important;
-}
-.tavern-menu > .lobby-profile .avatar-art{
+.avatar-choice:hover .avatar-portrait{transform:scale(1.035)}
+.avatar-choice.selected .avatar-portrait{filter:saturate(1.08) contrast(1.04)}
+.tavern-menu > .lobby-profile .avatar-portrait{
   border-radius:50%;
-  background-size:500% 400%!important;
-  box-shadow:inset 0 0 0 2px rgba(13,64,51,.45);
-}
-.avatar-svg{display:none!important}
-@media(max-width:650px){
-  .fighter-portrait .avatar-art{min-height:90px}
 }

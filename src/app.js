@@ -23,19 +23,38 @@ let selectedAvatar=Math.max(0,Math.min(19,Number(localStorage.getItem('yatzy.ava
 let token;try{token=identity();}catch{message='Tillåt lokal lagring i webbläsaren för att kunna spela och återansluta.';}
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const dots={1:[5],2:[1,9],3:[1,5,9],4:[1,3,7,9],5:[1,3,5,7,9],6:[1,3,4,6,7,9]};
-const AVATAR_SPRITE='/yatzy-avatar-sprite-v2.webp';
-function avatarStyle(id){
- const i=Math.max(0,Math.min(19,Number(id)||0));
- const col=i%5,row=Math.floor(i/5);
- return `--avatar-x:${col*25}%;--avatar-y:${row*(100/3)}%;background-image:url("${AVATAR_SPRITE}")`;
-}
 function avatarArt(id){
- return `<span class="avatar-art" style="${avatarStyle(id)}" aria-hidden="true"></span>`;
+ const i=Math.max(0,Math.min(19,Number(id)||0));
+ return `<img class="avatar-portrait" src="${import.meta.env.BASE_URL}avatars/bar-brawl-${String(i+1).padStart(2,'0')}.webp" width="512" height="512" alt="" decoding="async">`;
 }
 function avatarPicker(){
- return `<div class="avatar-picker"><h3>Välj din profil</h3><div class="avatar-grid mixed">${Array.from({length:20},(_,i)=>`<button type="button" class="avatar-choice ${selectedAvatar===i?'selected':''}" data-avatar="${i}" aria-label="Profil ${i+1}">${avatarArt(i)}</button>`).join('')}</div></div>`;
+ return `<div class="avatar-picker"><h3>Välj din profil</h3><div class="avatar-grid mixed">${Array.from({length:20},(_,i)=>`<button type="button" class="avatar-choice ${selectedAvatar===i?'selected':''}" data-avatar="${i}" aria-label="Profil ${i+1}" aria-pressed="${selectedAvatar===i}">${avatarArt(i)}</button>`).join('')}</div></div>`;
 }
 function roomAvatar(i){return room?.avatars?.[i]??(i?10:0);}
+
+// Only reload resumes the current view. A fresh app launch keeps its start screen.
+let nameDraft='',codeDraft='',recoveringRoom=false;
+const isReload=performance.getEntriesByType('navigation')[0]?.type==='reload';
+let savedView=null;
+try{if(isReload)savedView=JSON.parse(sessionStorage.getItem('yatzy.view')||'null');}catch{}
+if(savedView){
+ started=Boolean(savedView.started);friends=Boolean(savedView.friends);
+ subview=['howto','history'].includes(savedView.subview)?savedView.subview:null;
+ codeRoom=Boolean(savedView.codeRoom);inviteSent=Boolean(savedView.inviteSent);
+ nameDraft=String(savedView.nameDraft||'');codeDraft=String(savedView.codeDraft||'');
+ if(savedView.room?.id&&playerName()){
+  room=savedView.room;recoveringRoom=true;busy=true;
+  connection='Återansluter …';
+ }
+}
+function rememberView(){
+ try{sessionStorage.setItem('yatzy.view',JSON.stringify({started,friends,subview,codeRoom,inviteSent,nameDraft,codeDraft,room}));}catch{}
+}
+function rememberInputs(){
+ const nameInput=root.querySelector('#name'),codeInput=root.querySelector('#code');
+ if(nameInput)nameDraft=nameInput.value;
+ if(codeInput)codeDraft=codeInput.value;
+}
 
 function randomLanding(index){
  const jitter=(min,max)=>Math.round(min+Math.random()*(max-min));
@@ -47,6 +66,7 @@ function die(n,held=false,index=null,disabled=false,rollOrder=-1){
  return `<button class="die ${held?'held':''} ${rolling?'rolling':''}" ${style} ${index===null?'tabindex="-1" aria-hidden="true"':`data-die="${index}" aria-label="Tärning ${index+1}: ${n}${held?', låst':''}" aria-pressed="${held}"`} ${disabled?'disabled':''}>${Array.from({length:9},(_,i)=>`<i class="${dots[n].includes(i+1)?'pip':''}"></i>`).join('')}${index!==null?`<span>${held?'LÅST':' '}</span>`:''}</button>`;
 }
 function render(){
+ rememberInputs();rememberView();
  const playing=room&&room.status!=='waiting', myTurn=room?.turn===room?.seat&&room?.status==='playing';
  root.innerHTML=`<header><a href="${import.meta.env.BASE_URL}" aria-label="Yatzy startsida" id="brand"><span class="brand-icon">⚄</span> yatzy<span class="brand-dot">.</span></a><span class="edition">BARA DUELLER. ALLTID TVÅ.</span><span class="connection"><i></i>${room?esc(connection):'EN DUELL TILL'}</span></header><main>${!room?(subview?infoView(subview):home()):playing?game(myTurn):codeRoom?codeWaiting():waiting()}</main><div class="message" role="status" aria-live="polite">${esc(message)}</div><footer><span>FEM TÄRNINGAR. TVÅ SPELARE.</span><span>Lite tur. Mycket magkänsla.</span></footer>`;
  root.querySelector('#brand').onclick=e=>{if(room){e.preventDefault();message='Din match är kvar. Använd Lämna match för att avsluta.';render();}};
@@ -63,6 +83,9 @@ function render(){
  bind('#share',()=>createAndShare());bind('#share-room',()=>shareRoom());
  bind('#copy-code',async()=>{try{await navigator.clipboard.writeText(room.code);message='Koden är kopierad.';}catch{message=`Koden är ${room.code}.`;}render();});
  root.querySelector('#join-form')?.addEventListener('submit',e=>{e.preventDefault();enter('join');});
+ const nameInput=root.querySelector('#name'),codeInput=root.querySelector('#code');
+ if(nameInput){nameInput.value=nameDraft;nameInput.addEventListener('input',()=>{nameDraft=nameInput.value;rememberView();});}
+ if(codeInput){codeInput.value=codeDraft;codeInput.addEventListener('input',()=>{codeDraft=codeInput.value;rememberView();});}
  bind('#roll',()=>act('roll'));bind('#leave',()=>{if(room.status==='waiting'||confirm('Lämna duellen? Om matchen har börjat vinner motståndaren.'))act('leave');});
  bind('#home',()=>closeRoom());
  bind('#restart-match',()=>endMatchAndLobby());
@@ -74,7 +97,7 @@ function render(){
 function bind(selector,fn){const el=root.querySelector(selector);if(el)el.onclick=fn;}
 function home(){return started?(playerName()?lobby():nameStep()):splash();}
 function splash(){return `<section class="splash splash-art"><button id="start" class="start-hotspot" aria-label="Starta"></button></section>`;}
-function nameStep(){return `<section class="lobby-screen"><section class="lobby tavern-menu name-step"><button id="back-start" class="view-back" type="button" aria-label="Tillbaka till startsidan">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Vad heter du?</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div>${inviteCode?'<p class="invite-note">Du har fått en matchlänk. Ange ditt namn så ansluter du direkt till rummet.</p>':'<p class="name-note">Namnet används under den här sessionen.</p>'}<form id="name-form"><input id="name" maxlength="20" autocomplete="nickname" placeholder="Ditt spelarnamn" autofocus required>${avatarPicker()}<button class="primary menu-primary">Fortsätt <span>›</span></button></form></section></section>`;}
+function nameStep(){return `<section class="lobby-screen"><section class="lobby tavern-menu name-step"><button id="back-start" class="view-back" type="button" aria-label="Tillbaka till startsidan">‹ Tillbaka</button><div class="menu-crest" aria-hidden="true"><span>⚄</span><i></i><span>⚂</span></div><h2>Vad heter du?</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div>${inviteCode?'<p class="invite-note">Du har fått en matchlänk. Ange ditt namn så ansluter du direkt till rummet.</p>':'<p class="name-note">Namnet används under den här sessionen.</p>'}<form id="name-form"><input id="name" aria-label="Ditt spelarnamn" maxlength="20" autocomplete="nickname" placeholder="Ditt spelarnamn" autofocus required>${avatarPicker()}<button class="primary menu-primary">Fortsätt <span>›</span></button></form></section></section>`;}
 function lobby(){const pending=matches.filter(m=>m.status==='playing'&&m.turn===m.seat).length;return `<section class="lobby-screen"><section class="lobby tavern-menu"><div class="lobby-profile" aria-label="Vald profil">${avatarArt(selectedAvatar)}</div><h2>Din nästa duell<br>börjar här.</h2><div class="menu-rule" aria-hidden="true"><span>◆</span></div><p class="session-name">Spelar som <strong>${esc(playerName())}</strong></p>${matchList(pending)}<button id="find" class="primary menu-primary" ${!configured||busy||!token?'disabled':''}><span>Hitta motståndare</span><span>›</span></button><div class="divider"><span>ELLER</span></div><button id="friends" class="secondary menu-secondary" ${!configured||busy||!token?'disabled':''}><span class="friends-icon" aria-hidden="true">●●</span><span>Spela mot en vän</span><span>›</span></button>${friends?`<div class="friend-panel"><button id="back-lobby" class="view-back inline-back" type="button">‹ Tillbaka</button><button id="create" class="primary" ${busy?'disabled':''}>Skapa rum</button><form id="join-form"><label for="code">Har du en rumskod?</label><div class="join"><input id="code" aria-label="Rumskod" placeholder="ABCDE" pattern="[A-Za-z0-9]{5}" maxlength="5" minlength="5" required autocomplete="off"><button ${busy?'disabled':''}>Anslut</button></div></form></div>`:''}<button id="share" class="secondary share-link" ${!configured||busy||!token?'disabled':''}><span class="share-icon" aria-hidden="true">↗</span><span><strong>Dela länk</strong><small>Bjud in en vän via länk till en duell</small></span><span>›</span></button><div class="menu-bottom"><button type="button" id="howto" class="menu-link"><span aria-hidden="true">▤</span>Så spelar du<b>›</b></button><button type="button" id="history" class="menu-link"><span aria-hidden="true">◷</span>Historik<b>›</b></button></div>${!configured?'<p class="setup">Online behöver kopplas till Supabase. Starta med <code>npm run dev:local</code> för att testa en lokal duell med två spelare.</p>':''}${local?'<p class="local-note">Lokal testmiljö · öppna även ett privat webbläsarfönster för spelare två.</p>':''}</section></section>`;}
 function matchList(pending){
  if(matchesLoading&&!matches.length)return '<div class="match-list loading-matches">Hämtar dina matcher …</div>';
@@ -216,8 +239,8 @@ async function act(action,payload={}){
 }
 async function refresh(){
  if(!room||refreshBusy)return;const id=room.id;refreshBusy=true;
- try{const state=await command('get',token,id);if(room?.id===id){connection=local?'Lokal duell':'Ansluten';apply(state);}}
- catch(e){connection='Anslutningen bröts – försöker igen';if(/finns inte|gått ut|spelarnyckel/.test(e.message)){cleanup();room=null;localStorage.removeItem('yatzy.room');message=e.message;}render();}
+ try{const state=await command('get',token,id);if(room?.id===id){connection=local?'Lokal duell':'Ansluten';if(recoveringRoom){recoveringRoom=false;busy=false;}apply(state);}}
+ catch(e){connection='Anslutningen bröts – försöker igen';if(/finns inte|gått ut|spelarnyckel/.test(e.message)){cleanup();room=null;recoveringRoom=false;busy=false;localStorage.removeItem('yatzy.room');message=e.message;}render();}
  finally{refreshBusy=false;}
 }
 function cleanup(){unsubscribe();clearInterval(timer);}
@@ -313,3 +336,8 @@ async function closeRoom(){
 async function watch(){cleanup();unsubscribe=await subscribe(room.id,token,refresh,status=>{connection=status;render();});timer=setInterval(refresh,local?700:5000);await refresh();}
 window.addEventListener('online',()=>{if(room)refresh();else refreshMatches();});document.addEventListener('visibilitychange',()=>{if(!document.hidden){if(room)refresh();else refreshMatches();}});matchesTimer=setInterval(()=>{if(!room&&started&&playerName())refreshMatches();},30000);
 render();
+if(room&&recoveringRoom&&configured&&token){
+ void watch();
+}else if(savedView&&started&&playerName()){
+ void refreshMatches();
+}
