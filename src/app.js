@@ -104,67 +104,153 @@ function animateDiceRoll(){
  const shadow=roller?.querySelector('.single-die-shadow');
  if(!roller||!cube||!shadow){rollView=null;rollingIndices=[];render();return;}
 
- if(matchMedia('(prefers-reduced-motion: reduce)').matches){
-  roller.style.transform='translate3d(-50%,-50%,0)';
-  setTimeout(()=>{if(seq===rollSequence){rollView=null;rollingIndices=[];render();}},700);
-  return;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const width=Math.max(320,table.clientWidth);
+ const height=Math.max(480,table.clientHeight);
+
+ // A small rigid-body style simulation: gravity, table impact, friction,
+ // wall impacts and angular damping. No pre-baked motion path.
+ const state={
+  x:(Math.random()<.5?-1:1)*width*.38,
+  y:-height*.12,
+  z:reduced?0:110+Math.random()*30,
+  vx:(Math.random()<.5?1:-1)*(190+Math.random()*90),
+  vy:90+Math.random()*90,
+  vz:reduced?0:70+Math.random()*45,
+  rx:Math.random()*Math.PI*2,
+  ry:Math.random()*Math.PI*2,
+  rz:Math.random()*Math.PI*2,
+  wx:(Math.random()-.5)*10,
+  wy:(Math.random()-.5)*10,
+  wz:(Math.random()-.5)*8
+ };
+ const gravity=-920;
+ const restitution=.34;
+ const tableFriction=.79;
+ const airDrag=.992;
+ const angularAir=.989;
+ const angularFloor=.72;
+ const floorZ=0;
+ const wallX=width*.39;
+ const wallY=height*.26;
+ const startAt=performance.now();
+ let last=startAt;
+ let settledSince=0;
+ let raf=0;
+
+ function draw(){
+  roller.style.transform=`translate3d(calc(-50% + ${state.x}px),calc(-50% + ${state.y}px),${state.z}px)`;
+  cube.style.transform=`rotateX(${state.rx}rad) rotateY(${state.ry}rad) rotateZ(${state.rz}rad)`;
+  const lift=Math.min(1,state.z/120);
+  shadow.style.opacity=String(.42-.31*lift);
+  shadow.style.transform=`translate(-50%,-50%) scale(${1-.38*lift})`;
  }
 
- const width=table.clientWidth;
- const height=table.clientHeight;
- const fromLeft=Math.random()<.5;
- const startX=(fromLeft?-1:1)*(width*.46);
- const targetX=(Math.random()-.5)*width*.24;
- const targetY=height*.05+(Math.random()-.5)*height*.08;
- const side=Math.random()<.5?-1:1;
- const spinX=side*(540+Math.random()*180);
- const spinY=-side*(460+Math.random()*200);
- const spinZ=(Math.random()-.5)*150;
- const duration=2050+Math.random()*220;
-
- const travel=roller.animate([
-  {offset:0,transform:`translate3d(calc(-50% + ${startX}px),calc(-50% - 28px),46px)`},
-  {offset:.34,transform:`translate3d(calc(-50% + ${targetX-22}px),calc(-50% + ${targetY-12}px),18px)`},
-  {offset:.52,transform:`translate3d(calc(-50% + ${targetX+7}px),calc(-50% + ${targetY+2}px),0)`},
-  {offset:.66,transform:`translate3d(calc(-50% + ${targetX-5}px),calc(-50% + ${targetY-7}px),10px)`},
-  {offset:.79,transform:`translate3d(calc(-50% + ${targetX+2}px),calc(-50% + ${targetY+1}px),0)`},
-  {offset:.90,transform:`translate3d(calc(-50% + ${targetX-1}px),calc(-50% + ${targetY-2}px),4px)`},
-  {offset:1,transform:`translate3d(calc(-50% + ${targetX}px),calc(-50% + ${targetY}px),0)`}
- ],{duration,easing:'cubic-bezier(.19,.66,.2,1)',fill:'forwards'});
-
- const tumble=cube.animate([
-  {offset:0,transform:'rotateX(0deg) rotateY(0deg) rotateZ(0deg)'},
-  {offset:.34,transform:`rotateX(${spinX*.42}deg) rotateY(${spinY*.42}deg) rotateZ(${spinZ*.42}deg)`},
-  {offset:.52,transform:`rotateX(${spinX*.66}deg) rotateY(${spinY*.66}deg) rotateZ(${spinZ*.66}deg)`},
-  {offset:.66,transform:`rotateX(${spinX*.80}deg) rotateY(${spinY*.80}deg) rotateZ(${spinZ*.80}deg)`},
-  {offset:.79,transform:`rotateX(${spinX*.92}deg) rotateY(${spinY*.92}deg) rotateZ(${spinZ*.92}deg)`},
-  {offset:.90,transform:'rotateX(716deg) rotateY(-717deg) rotateZ(356deg)'},
-  {offset:1,transform:'rotateX(720deg) rotateY(-720deg) rotateZ(360deg)'}
- ],{duration,easing:'cubic-bezier(.17,.62,.22,1)',fill:'forwards'});
-
- shadow.animate([
-  {offset:0,opacity:.08,transform:'translate(-50%,-50%) scale(.58)'},
-  {offset:.52,opacity:.38,transform:'translate(-50%,-50%) scale(1.05)'},
-  {offset:.66,opacity:.20,transform:'translate(-50%,-50%) scale(.80)'},
-  {offset:.79,opacity:.36,transform:'translate(-50%,-50%) scale(1.02)'},
-  {offset:1,opacity:.40,transform:'translate(-50%,-50%) scale(1)'}
- ],{duration,easing:'ease-out',fill:'forwards'});
-
- Promise.all([travel.finished.catch(()=>{}),tumble.finished.catch(()=>{})]).then(()=>{
-  if(seq!==rollSequence)return;
+ function finish(){
+  cancelAnimationFrame(raf);
+  // Make the server result unambiguous and leave it on screen long enough to read.
+  state.z=0;
+  roller.style.transition='transform 220ms ease-out';
+  cube.style.transition='transform 260ms ease-out';
+  cube.style.transform='rotateX(0deg) rotateY(0deg) rotateZ(0deg)';
+  draw();
+  const result=table.querySelector('.throw-view-result');
+  if(result){
+   result.textContent=String(value);
+   result.classList.add('visible');
+  }
   clearTimeout(rollAnimationTimer);
   rollAnimationTimer=setTimeout(()=>{
    if(seq!==rollSequence)return;
    rollView=null;
    rollingIndices=[];
    render();
-  },850);
- });
+  },1350);
+ }
+
+ function step(now){
+  if(seq!==rollSequence)return;
+  let dt=Math.min(.025,(now-last)/1000||.016);
+  last=now;
+
+  state.vz+=gravity*dt;
+  state.x+=state.vx*dt;
+  state.y+=state.vy*dt;
+  state.z+=state.vz*dt;
+  state.rx+=state.wx*dt;
+  state.ry+=state.wy*dt;
+  state.rz+=state.wz*dt;
+
+  state.vx*=airDrag;
+  state.vy*=airDrag;
+  state.wx*=angularAir;
+  state.wy*=angularAir;
+  state.wz*=angularAir;
+
+  if(state.z<=floorZ){
+   state.z=floorZ;
+   if(Math.abs(state.vz)>26){
+    state.vz=-state.vz*restitution;
+    state.vx*=tableFriction;
+    state.vy*=tableFriction;
+    state.wx*=angularFloor;
+    state.wy*=angularFloor;
+    state.wz*=angularFloor;
+    // Uneven corners make each bounce change the roll naturally.
+    state.wx+=(Math.random()-.5)*1.7;
+    state.wy+=(Math.random()-.5)*1.7;
+   }else{
+    state.vz=0;
+    const rollingDrag=Math.pow(.90,dt*60);
+    state.vx*=rollingDrag;
+    state.vy*=rollingDrag;
+    state.wx*=Math.pow(.86,dt*60);
+    state.wy*=Math.pow(.86,dt*60);
+    state.wz*=Math.pow(.84,dt*60);
+   }
+  }
+
+  if(state.x<-wallX||state.x>wallX){
+   state.x=Math.max(-wallX,Math.min(wallX,state.x));
+   state.vx*=-.42;
+   state.wy*=-.72;
+  }
+  if(state.y<-wallY||state.y>wallY){
+   state.y=Math.max(-wallY,Math.min(wallY,state.y));
+   state.vy*=-.40;
+   state.wx*=-.72;
+  }
+
+  draw();
+
+  const speed=Math.hypot(state.vx,state.vy);
+  const spin=Math.hypot(state.wx,state.wy,state.wz);
+  const elapsed=now-startAt;
+  const quiet=state.z===0&&Math.abs(state.vz)<1&&speed<13&&spin<1.1;
+
+  if(quiet){
+   if(!settledSince)settledSince=now;
+  }else{
+   settledSince=0;
+  }
+
+  // Keep the throw visible for at least 2.4s, but never hang indefinitely.
+  if((elapsed>2400&&settledSince&&now-settledSince>380)||elapsed>4300){
+   finish();
+   return;
+  }
+  raf=requestAnimationFrame(step);
+ }
+
+ draw();
+ raf=requestAnimationFrame(step);
 }
+
 
 function render(){
  rememberInputs();rememberView();
  if(rollView){
+  if(root.querySelector('.throw-view'))return;
   root.innerHTML=rollViewMarkup();
   if(rollAnimationPending&&!busy)queueMicrotask(animateDiceRoll);
   return;
@@ -338,7 +424,7 @@ async function act(action,payload={}){
    apply(next);
    rollAnimationTimer=setTimeout(()=>{
     if(rollView){rollView=null;rollingIndices=[];render();}
-   },3600);
+   },6500);
   }else{
    apply(next);
   }

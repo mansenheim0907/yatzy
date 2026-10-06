@@ -2265,3 +2265,24 @@ body:has(.throw-view) .message{display:none!important}
   .throw-view-table .single-die-roller{--cube-size:74px;top:56%}
   .throw-view-table:after{inset:10px}
 }
+
+
+/* Physics throw readability */
+.throw-view-result{
+  opacity:0;
+  transform:scale(.82);
+  transition:opacity .18s ease,transform .22s ease;
+}
+.throw-view-result.visible{
+  opacity:1;
+  transform:scale(1);
+  color:rgba(255,248,236,.92);
+  border-color:rgba(255,234,204,.42);
+  background:rgba(38,18,8,.48);
+}
+.throw-view-table .single-die-roller{
+  will-change:transform;
+}
+.throw-view-table .single-die-cube{
+  will-change:transform;
+}
