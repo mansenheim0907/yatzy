@@ -1900,7 +1900,7 @@ body:has(main > .game-view):before{
   display:block;
   width:100%;
   height:100%;
-  background-image:url('/yatzy-avatar-sprite.webp');
+  background-image:url('/yatzy-avatar-sprite-v2.webp');
   background-size:500% 400%;
   background-position:var(--avatar-x) var(--avatar-y);
   background-repeat:no-repeat;
@@ -1965,9 +1965,24 @@ body{
   overscroll-behavior:none;
 }
 
-/* Avatar sprite is 4 columns × 5 rows. */
+/* Avatar sprite is 5 columns × 4 rows. Keep the final override in sync with avatarStyle(). */
 .avatar-art,
 .fighter-portrait .avatar-art,
 .tavern-menu > .lobby-profile .avatar-art{
-  background-size:400% 500%;
+  background-size:500% 400%;
+}
+
+
+/* Hard stop for browser rubber-band refresh without disabling page scrolling. */
+html,body,#app{
+  overscroll-behavior-y:none!important;
+  overscroll-behavior:none!important;
+}
+html{
+  min-height:100%;
+  background:#111;
+}
+body{
+  min-height:100.1vh;
+  -webkit-overflow-scrolling:touch;
 }
